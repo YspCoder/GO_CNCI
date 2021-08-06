@@ -1,0 +1,3 @@
+# github.com/daviddengcn/go-colortext v1.0.0
+## explicit
+github.com/daviddengcn/go-colortext
