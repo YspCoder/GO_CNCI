@@ -44,8 +44,6 @@ type Reckon struct {
 	MLCDS_sequenceR     []string
 	MLCDS_seq_length    int
 	HashMatrix          *sync.Map
-	SCORE               *os.File
-	DETIL               *os.File
 }
 
 func New() *Reckon {
@@ -64,23 +62,24 @@ func New() *Reckon {
 		MLCDS_sequenceR:     nil,
 		MLCDS_seq_length:    0,
 		HashMatrix:          nil,
-		SCORE:               nil,
-		DETIL:               nil,
 	}
 }
 
 func (this *Reckon) Init(ws *sync.WaitGroup) {
 	defer ws.Done()
 	var err error
-	this.SCORE, err = os.Create(this.TempScore)
+	score, err := os.Create(this.TempScore)
 	if err != nil {
-		Error("Create ProjectDir error![%v]\n", err)
-	}
-	this.DETIL, err = os.Create(this.TempDetil)
-	if err != nil {
-		Error("Create ProjectDir error![%v]\n", err)
+		Error("Create tmp error![%v]\n", err)
 		return
 	}
+	_ = score.Close()
+	detil, err := os.Create(this.TempDetil)
+	if err != nil {
+		Error("Create tmp error![%v]\n", err)
+		return
+	}
+	_ = detil.Close()
 	sequence_Arr := ReadFileArray(this.TempInput)
 	sLen := len(sequence_Arr) - 1
 	sequence_Arr = sequence_Arr[:sLen]
@@ -98,8 +97,7 @@ func (this *Reckon) Init(ws *sync.WaitGroup) {
 		go this.Compare()
 	}
 	sema.Wait()
-	defer this.SCORE.Close()
-	defer this.DETIL.Close()
+
 }
 
 func (this *Reckon) Compare() {
@@ -210,13 +208,23 @@ func (this *Reckon) Compare() {
 	Array_Str := strings.Join(Coding_Array_one, " ")
 	PROPERTY_STR := fmt.Sprintf("%v %v %v %v %v %v\n", M, M_length, M_score, length_precent, score_distance, Array_Str)
 	DETIL_STR := fmt.Sprintf("%v;;;;;%v %v %v\n", this.Label, out_pos, M_score, DetilLen)
-	_, err := this.SCORE.WriteString(PROPERTY_STR)
+	score, err := os.OpenFile(this.TempScore, os.O_APPEND|os.O_WRONLY, os.ModeAppend)
 	if err != nil {
-		fmt.Println("err")
+		Error("OpenFile : [%s] Err : [%s]", this.TempScore, err.Error())
+		return
 	}
-	_, err = this.DETIL.WriteString(DETIL_STR)
+	_, err = score.WriteString(PROPERTY_STR)
 	if err != nil {
-		fmt.Println("err")
+		Error("WriteString Err : [%s]", err.Error())
+	}
+	detil, err := os.OpenFile(this.TempDetil, os.O_APPEND|os.O_WRONLY, os.ModeAppend)
+	if err != nil {
+		Error("OpenFile : [%s] Err : [%s]", this.TempDetil, err.Error())
+		return
+	}
+	_, err = detil.WriteString(DETIL_STR)
+	if err != nil {
+		Error("WriteString Err : [%s]", err.Error())
 	}
 }
 

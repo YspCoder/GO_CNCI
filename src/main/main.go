@@ -18,6 +18,7 @@ func main() {
 	number, _ := strconv.Atoi(os.Args[3])
 	out_temp := os.Args[4]
 	logFile := os.Args[5]
+	_ = os.Args[5]
 
 	hashMatrix := ReadFileMatrix(CNCI_matrix)
 	sequence_Arr := ReadFileArray(inputFile)
@@ -33,9 +34,9 @@ func main() {
 		wg.Add(1)
 		rk := reckon.New()
 		rk.HashMatrix = hashMatrix
-		rk.TempInput = fmt.Sprintf("%s/CNCI_file%v", out_temp, i)
-		rk.TempScore = fmt.Sprintf("%s/CNCI_file_score%v", out_temp, number)
-		rk.TempDetil = fmt.Sprintf("%s/CNCI_file_detil%v", out_temp, number)
+		rk.TempInput = fmt.Sprintf("%s/GO_CNCI_file%v", out_temp, i)
+		rk.TempScore = fmt.Sprintf("%s/GO_CNCI_file_score%v", out_temp, number)
+		rk.TempDetil = fmt.Sprintf("%s/GO_CNCI_file_detil%v", out_temp, number)
 		go rk.Init(&wg)
 	}
 	wg.Wait()
