@@ -21,11 +21,11 @@ import (
 )
 
 var (
-	MaxValue         = []float64{}
-	MaxString        = []string{}
-	LengthStoreArray = []int{}
-	Pos              = []string{}
-	OtherCdsArray    = []float64{}
+	MaxValue         = make([]float64, 0)
+	MaxString        = make([]string, 0)
+	LengthStoreArray = make([]int, 0)
+	Pos              = make([]string, 0)
+	OtherCdsArray    = make([]float64, 0)
 )
 
 type Reckon struct {
@@ -82,8 +82,8 @@ func (this *Reckon) Init(seam *gsema.Semaphore) {
 	sequence_Arr := ReadFileArray(this.TempInput)
 	sLen := len(sequence_Arr) - 1
 	sequence_Arr = sequence_Arr[:sLen]
-	label_Arr_tmp := []string{}
-	fast_seq_Arr_tmp := []string{}
+	label_Arr_tmp := make([]string, 0)
+	fast_seq_Arr_tmp := make([]string, 0)
 	for n := 0; n < len(sequence_Arr); n++ {
 		if n == 0 || n%2 == 0 {
 			label_Arr_tmp = append(label_Arr_tmp, sequence_Arr[n])
@@ -128,8 +128,14 @@ func (this *Reckon) Compare(sm *gsema.Semaphore) {
 			orf_index = o
 		}
 	}
-	o_tmp_arr := strings.Split(MaxString[orf_index], " ")
-	var o_arr = []string{}
+	var o_tmp_arr []string
+	if orf_index >= len(MaxString) {
+		return
+	} else {
+		o_tmp_arr = strings.Split(MaxString[orf_index], " ")
+	}
+
+	var o_arr = make([]string, 0)
 	o_arr = o_tmp_arr[:len(o_tmp_arr)-1]
 	SequenceLen := len(o_arr) - 1
 	M_score := 0.0
@@ -164,14 +170,24 @@ func (this *Reckon) Compare(sm *gsema.Semaphore) {
 	}
 	score_distance = score_distance / 5
 
-	out_pos := Pos[orf_index]
-	M_length := LengthStoreArray[orf_index]
+	M_length := 0
+	var out_pos string
+	if orf_index >= len(Pos) {
+		return
+	} else {
+		out_pos = Pos[orf_index]
+	}
+	if orf_index >= len(LengthStoreArray) {
+		return
+	} else {
+		M_length = LengthStoreArray[orf_index]
+	}
 	length_total_score := 0.0
 	for p := 0; p < len(LengthStoreArray); p++ {
 		length_total_score = length_total_score + float64(LengthStoreArray[p])
 	}
 	length_precent := float64(M_length) / length_total_score
-	Coding_Array_one := []string{}
+	Coding_Array_one := make([]string, 0)
 	for n := 0; n < len(o_arr); n++ {
 		temp1 := o_arr[n]
 		byteMatchResult, _ := regexp.Match(`[atcg{3}]`, []byte(temp1))
@@ -227,7 +243,7 @@ func (this *Reckon) Compare(sm *gsema.Semaphore) {
 
 func (this *Reckon) multilayerComparison(wg *sync.WaitGroup) {
 	defer wg.Done()
-	CodonScore := []float64{}
+	CodonScore := make([]float64, 0)
 	TempStr := ""
 	if this.Rounds < 3 {
 		TempStr = InitCodonSeq(this.Rounds, this.SeqLen-1, 3, this.SequenceProcessArr)
@@ -243,7 +259,7 @@ func (this *Reckon) multilayerComparison(wg *sync.WaitGroup) {
 	if seqLength > WindowStep {
 		for EachCodon := 0; EachCodon < WinLen; EachCodon++ {
 			num := 0.0
-			SingleArray := []string{}
+			SingleArray := make([]string, 0)
 			for t := range XRangeInt(EachCodon, WindowStep+EachCodon) {
 				SingleArray = append(SingleArray, TempArray[t])
 			}

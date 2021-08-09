@@ -65,7 +65,7 @@ func ReadFileArray(path string) []string {
 	}
 	defer f.Close()
 	scanner := bufio.NewScanner(f)
-	fileArray := []string{}
+	fileArray := make([]string, 0)
 	for scanner.Scan() {
 		fileArray = append(fileArray, scanner.Text())
 	}
@@ -74,7 +74,7 @@ func ReadFileArray(path string) []string {
 }
 
 func TwoLineFasta(sequence_Arr []string) []string {
-	Tmp_sequence_Arr := []string{}
+	Tmp_sequence_Arr := make([]string, 0)
 	Tmp_trans_str := ""
 	for i := 0; i < len(sequence_Arr); i++ {
 		if strings.Contains(sequence_Arr[i], ">") {
@@ -98,7 +98,7 @@ func TwoLineFasta(sequence_Arr []string) []string {
 }
 
 func GetLabelArray(labelArray, fastaSeqArray []string) []string {
-	TOT_STRING := []string{}
+	TOT_STRING := make([]string, 0)
 	for i := 0; i < len(labelArray); i++ {
 		tmp_label := strings.ReplaceAll(labelArray[i], "\r", "")
 		Temp_Seq := strings.ReplaceAll(fastaSeqArray[i], "\r", "")
@@ -156,7 +156,7 @@ func PutResult(detil_array []string, filepath string) []string {
 	file_Arr := ReadFileArray(filepath)
 	classify_index := 0
 	index_coding := "1"
-	Temp_Result_Arr := []string{}
+	Temp_Result_Arr := make([]string, 0)
 	for i := 0; i < len(detil_array); i++ {
 		temp_label_arr_label := strings.Split(detil_array[i], ";;;;;")
 		Label := temp_label_arr_label[0]
@@ -278,7 +278,7 @@ func ReverseFloats(params []float64) []float64 {
 
 func StringToArray(params string) []string {
 	paramsCharAr := []byte(params) //把字符串转为字节数组，每一位存储的是该字符对应的ASCII码
-	var paramArray = []string{}
+	var paramArray = make([]string, 0)
 	for i := 0; i < len(paramsCharAr); i++ {
 		paramArray = append(paramArray, string(paramsCharAr[i]))
 	}
@@ -301,8 +301,8 @@ func InitCodonSeq(num, length, step int, Arr []string) string {
 }
 
 func Tran_checkSeq(input_arr []string, Temp_Log string) ([]string, []string) {
-	label_Arr := []string{}
-	FastA_seq_Arr := []string{}
+	label_Arr := make([]string, 0)
+	FastA_seq_Arr := make([]string, 0)
 	for n := 0; n < len(input_arr); n++ {
 		if n == 0 || n%2 == 0 {
 			label_Arr = append(label_Arr, input_arr[n])

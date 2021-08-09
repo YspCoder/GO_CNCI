@@ -17,8 +17,8 @@ import (
 )
 
 func Merge(inputDir, outfile string, number int) ([]string, error) {
-	scoreArray := []string{}
-	detilArray := []string{}
+	scoreArray := make([]string, 0)
+	detilArray := make([]string, 0)
 	for i := 1; i <= number; i++ {
 		Score_string := fmt.Sprintf("%s/GO_CNCI_file_score%v", inputDir, i)
 		_score := utils.ReadFileArray(Score_string)
