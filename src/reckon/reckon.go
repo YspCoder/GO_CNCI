@@ -21,12 +21,11 @@ import (
 )
 
 var (
-	MaxValue         = make([]float64, 0)
-	MaxString        = make([]string, 0)
-	LengthStoreArray = make([]int, 0)
-	Pos              = make([]string, 0)
-	OtherCdsArray    = make([]float64, 0)
-	sema             = gsema.NewSemaphore(12)
+	MaxValue         = []float64{}
+	MaxString        = []string{}
+	LengthStoreArray = []int{}
+	Pos              = []string{}
+	OtherCdsArray    = []float64{}
 )
 
 type Reckon struct {
@@ -65,26 +64,26 @@ func New() *Reckon {
 	}
 }
 
-func (this *Reckon) Init(ws *sync.WaitGroup) {
-	defer ws.Done()
+func (this *Reckon) Init(seam *gsema.Semaphore) {
+	defer seam.Done()
 	var err error
 	score, err := os.Create(this.TempScore)
 	if err != nil {
-		Error("Create tmp error![%v]\n", err)
+		Error("Create tmp error![%v]\n", err.Error())
 		return
 	}
 	_ = score.Close()
 	detil, err := os.Create(this.TempDetil)
 	if err != nil {
-		Error("Create tmp error![%v]\n", err)
+		Error("Create tmp error![%v]\n", err.Error())
 		return
 	}
 	_ = detil.Close()
 	sequence_Arr := ReadFileArray(this.TempInput)
 	sLen := len(sequence_Arr) - 1
 	sequence_Arr = sequence_Arr[:sLen]
-	label_Arr_tmp := make([]string, 0)
-	fast_seq_Arr_tmp := make([]string, 0)
+	label_Arr_tmp := []string{}
+	fast_seq_Arr_tmp := []string{}
 	for n := 0; n < len(sequence_Arr); n++ {
 		if n == 0 || n%2 == 0 {
 			label_Arr_tmp = append(label_Arr_tmp, sequence_Arr[n])
@@ -92,16 +91,18 @@ func (this *Reckon) Init(ws *sync.WaitGroup) {
 			fast_seq_Arr_tmp = append(fast_seq_Arr_tmp, sequence_Arr[n])
 		}
 	}
+	sm := gsema.NewSemaphore(12)
 	for d := 0; d < len(label_Arr_tmp); d++ {
-		sema.Add(1)
-		go this.Compare()
+		sm.Add(1)
+		this.Label = label_Arr_tmp[d]
+		this.Seq = fast_seq_Arr_tmp[d]
+		go this.Compare(sm)
 	}
-	sema.Wait()
-
+	sm.Wait()
 }
 
-func (this *Reckon) Compare() {
-	defer sema.Done()
+func (this *Reckon) Compare(sm *gsema.Semaphore) {
+	defer sm.Done()
 	DetilLen := len(this.Seq)
 	tran_fir_seq := strings.ToLower(this.Seq)
 	tran_sec_seq := strings.ReplaceAll(tran_fir_seq, "u", "t")
@@ -109,7 +110,6 @@ func (this *Reckon) Compare() {
 	this.SequenceProcessArrR = append(this.SequenceProcessArrR, this.SequenceProcessArr...)
 	this.SequenceProcessArrR = Reverse(this.SequenceProcessArrR)
 	this.SeqLen = len(this.SequenceProcessArr) - 1
-
 	var wgs sync.WaitGroup
 	for o1 := 0; o1 < 6; o1++ {
 		wgs.Add(1)
@@ -129,7 +129,7 @@ func (this *Reckon) Compare() {
 		}
 	}
 	o_tmp_arr := strings.Split(MaxString[orf_index], " ")
-	var o_arr = make([]string, 0)
+	var o_arr = []string{}
 	o_arr = o_tmp_arr[:len(o_tmp_arr)-1]
 	SequenceLen := len(o_arr) - 1
 	M_score := 0.0
@@ -163,10 +163,7 @@ func (this *Reckon) Compare() {
 		score_distance += M_score - OtherCdsArray[m]
 	}
 	score_distance = score_distance / 5
-	if len(Pos) <= orf_index {
-		Warn("Insufficient length")
-		return
-	}
+
 	out_pos := Pos[orf_index]
 	M_length := LengthStoreArray[orf_index]
 	length_total_score := 0.0
@@ -174,7 +171,7 @@ func (this *Reckon) Compare() {
 		length_total_score = length_total_score + float64(LengthStoreArray[p])
 	}
 	length_precent := float64(M_length) / length_total_score
-	Coding_Array_one := make([]string, 0)
+	Coding_Array_one := []string{}
 	for n := 0; n < len(o_arr); n++ {
 		temp1 := o_arr[n]
 		byteMatchResult, _ := regexp.Match(`[atcg{3}]`, []byte(temp1))
@@ -188,8 +185,8 @@ func (this *Reckon) Compare() {
 	}
 
 	this.HashMatrix.Range(func(key, value interface{}) bool {
-		v := value.(int)
-		Coding_Array_one = append(Coding_Array_one, strconv.Itoa(v))
+		v := value.(float64)
+		Coding_Array_one = append(Coding_Array_one, strconv.FormatFloat(v, 'f', 15, 64))
 		return true
 	})
 	C_num1 := 0.0
@@ -230,7 +227,7 @@ func (this *Reckon) Compare() {
 
 func (this *Reckon) multilayerComparison(wg *sync.WaitGroup) {
 	defer wg.Done()
-	CodonScore := make([]float64, 0)
+	CodonScore := []float64{}
 	TempStr := ""
 	if this.Rounds < 3 {
 		TempStr = InitCodonSeq(this.Rounds, this.SeqLen-1, 3, this.SequenceProcessArr)
@@ -246,7 +243,7 @@ func (this *Reckon) multilayerComparison(wg *sync.WaitGroup) {
 	if seqLength > WindowStep {
 		for EachCodon := 0; EachCodon < WinLen; EachCodon++ {
 			num := 0.0
-			SingleArray := make([]string, 0)
+			SingleArray := []string{}
 			for t := range XRangeInt(EachCodon, WindowStep+EachCodon) {
 				SingleArray = append(SingleArray, TempArray[t])
 			}

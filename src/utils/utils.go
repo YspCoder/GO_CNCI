@@ -65,16 +65,16 @@ func ReadFileArray(path string) []string {
 	}
 	defer f.Close()
 	scanner := bufio.NewScanner(f)
-	fileArray := make([]string, 0)
+	fileArray := []string{}
 	for scanner.Scan() {
 		fileArray = append(fileArray, scanner.Text())
 	}
-	Info("Read file success")
+	Info("Read file success filename : [%s]", path)
 	return fileArray
 }
 
 func TwoLineFasta(sequence_Arr []string) []string {
-	Tmp_sequence_Arr := make([]string, 0)
+	Tmp_sequence_Arr := []string{}
 	Tmp_trans_str := ""
 	for i := 0; i < len(sequence_Arr); i++ {
 		if strings.Contains(sequence_Arr[i], ">") {
@@ -98,7 +98,7 @@ func TwoLineFasta(sequence_Arr []string) []string {
 }
 
 func GetLabelArray(labelArray, fastaSeqArray []string) []string {
-	TOT_STRING := make([]string, 0)
+	TOT_STRING := []string{}
 	for i := 0; i < len(labelArray); i++ {
 		tmp_label := strings.ReplaceAll(labelArray[i], "\r", "")
 		Temp_Seq := strings.ReplaceAll(fastaSeqArray[i], "\r", "")
@@ -112,7 +112,7 @@ func SplitFile(files []string, number int, out string) {
 	file_num := len(files) / 2
 	split_step := file_num / number
 	split_step = split_step * 2
-	title := fmt.Sprintf("%v/CNCI_file", out)
+	title := fmt.Sprintf("%v/GO_CNCI_file", out)
 	start := 0
 	end := split_step
 	for i := 1; i <= number+1; i++ {
@@ -135,6 +135,112 @@ func SplitFile(files []string, number int, out string) {
 			}
 			defer TEMP_FILE.Close()
 		}
+	}
+}
+
+func Libsvm(filepath, outSvm, outfile, outTmp string) error {
+	err := CmdBash("bash", "-c", "./libsvm-3.0/svm-scale -r ./CNCI_Parameters/python_scale "+filepath+" > "+outSvm)
+	if err != nil {
+		Error("svm-scale err [%s]", err.Error())
+		return err
+	}
+	err = CmdBash("bash", "-c", "./libsvm-3.0/svm-predict "+outSvm+" ./CNCI_Parameters/python_model "+outfile+" > "+outTmp)
+	if err != nil {
+		Error("svm-predict err [%s]", err.Error())
+		return err
+	}
+	return nil
+}
+
+func PutResult(detil_array []string, filepath string) []string {
+	file_Arr := ReadFileArray(filepath)
+	classify_index := 0
+	index_coding := "1"
+	Temp_Result_Arr := []string{}
+	for i := 0; i < len(detil_array); i++ {
+		temp_label_arr_label := strings.Split(detil_array[i], ";;;;;")
+		Label := temp_label_arr_label[0]
+		temp_label_arr := strings.Split(temp_label_arr_label[1], " ")
+		sub_temp_label_arr := temp_label_arr[1:]
+		sub_temp_label_str := strings.Join(sub_temp_label_arr, " ")
+		if file_Arr[classify_index] == index_coding {
+			Label = fmt.Sprintf("%s;;;;; coding", Label)
+		} else {
+			Label = fmt.Sprintf("%s;;;;; noncoding", Label)
+		}
+		classify_index = classify_index + 1
+		Temp_Result_str := fmt.Sprintf("%s %s", Label, sub_temp_label_str)
+		Temp_Result_Arr = append(Temp_Result_Arr, Temp_Result_str)
+	}
+	return Temp_Result_Arr
+}
+
+func PrintResult(result []string, outDetil string) {
+	OutFileResult, err := os.Create(outDetil)
+	if err != nil {
+		Error("PrintResult Err : [%s]", err.Error())
+		return
+	}
+	Tabel := "Transcript ID" + "\t" + "index" + "\t" + "score" + "\t" + "start" + "\t" + "end" + "\t" + "length" + "\n"
+	_, _ = OutFileResult.WriteString(Tabel)
+	for i := 0; i < len(result); i++ {
+		out_label := result[i]
+		out_label_arr_label := strings.Split(out_label, ";;;;;")
+		out_label_arr := strings.Split(out_label_arr_label[1], " ")
+		T_label := out_label_arr_label[0]
+		Tabel_label := T_label[1:]
+		property := out_label_arr[1]
+		start_position := out_label_arr[2]
+		stop_position := out_label_arr[3]
+		value := out_label_arr[4]
+		fmt.Println(i)
+		out_value := substring(value)
+		v1, _ := strconv.ParseFloat(out_value, 64)
+		T_length := out_label_arr[5]
+		fmt.Println(out_label_arr[5])
+		if v1 == 0 {
+			v1 = v1 + 0.001
+		}
+		temp_out_str := ""
+		if property == "noncoding" {
+			v2 := 0.64 * v1
+			v3 := 0.64 * v2
+			if v3 > 0 {
+				if v3 > 1 {
+					v4 := -1 / v3
+					temp_out_str = fmt.Sprintf("%v\t%v\t%v\t%v\t%v\t%v\n", Tabel_label, property, v4, start_position, stop_position, T_length)
+				} else {
+					v4 := -1 * v3
+					temp_out_str = fmt.Sprintf("%v\t%v\t%v\t%v\t%v\t%v\n", Tabel_label, property, v4, start_position, stop_position, T_length)
+				}
+			}
+		} else {
+			temp_out_str = fmt.Sprintf("%v\t%v\t%v\t%v\t%v\t%v\n", Tabel_label, property, v1, start_position, stop_position, T_length)
+		}
+		if property == "coding" {
+			if v1 <= 0 {
+				if v1 <= -1 {
+					v2 := -1 / v1
+					temp_out_str = fmt.Sprintf("%v\t%v\t%v\t%v\t%v\t%v\n", Tabel_label, property, v2, start_position, stop_position, T_length)
+				} else {
+					v2 := -1 * v1
+					temp_out_str = fmt.Sprintf("%v\t%v\t%v\t%v\t%v\t%v\n", Tabel_label, property, v2, start_position, stop_position, T_length)
+				}
+			} else {
+				temp_out_str = fmt.Sprintf("%v\t%v\t%v\t%v\t%v\t%v\n", Tabel_label, property, v1, start_position, stop_position, T_length)
+
+			}
+		}
+		_, _ = OutFileResult.WriteString(temp_out_str)
+	}
+	defer OutFileResult.Close()
+}
+
+func substring(param string) string {
+	if len(param) <= 5 {
+		return param
+	} else {
+		return param[:5]
 	}
 }
 
@@ -172,7 +278,7 @@ func ReverseFloats(params []float64) []float64 {
 
 func StringToArray(params string) []string {
 	paramsCharAr := []byte(params) //把字符串转为字节数组，每一位存储的是该字符对应的ASCII码
-	var paramArray = make([]string, 0)
+	var paramArray = []string{}
 	for i := 0; i < len(paramsCharAr); i++ {
 		paramArray = append(paramArray, string(paramsCharAr[i]))
 	}
@@ -195,8 +301,8 @@ func InitCodonSeq(num, length, step int, Arr []string) string {
 }
 
 func Tran_checkSeq(input_arr []string, Temp_Log string) ([]string, []string) {
-	label_Arr := make([]string, 0)
-	FastA_seq_Arr := make([]string, 0)
+	label_Arr := []string{}
+	FastA_seq_Arr := []string{}
 	for n := 0; n < len(input_arr); n++ {
 		if n == 0 || n%2 == 0 {
 			label_Arr = append(label_Arr, input_arr[n])
