@@ -1,6 +1,0 @@
-# github.com/EDDYCJY/gsema v0.0.0-20190120044130-7f6a61b75219
-## explicit
-github.com/EDDYCJY/gsema
-# github.com/daviddengcn/go-colortext v1.0.0
-## explicit
-github.com/daviddengcn/go-colortext
