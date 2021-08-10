@@ -24,14 +24,14 @@ func main() {
 	inputFile := os.Args[2]
 	number, err := strconv.Atoi(os.Args[3])
 	if err != nil {
-		Info("Please enter a positive integer")
+		Info("Please enter a positive integer -- number_of_file_partitions")
 		return
 	}
 	outDir := os.Args[4]
 	libsvm_path := os.Args[5]
 	thread, err := strconv.Atoi(os.Args[6])
 	if err != nil {
-		Info("Please enter a positive integer")
+		Info("Please enter a positive integer -- thread")
 		return
 	}
 	out_temp := fmt.Sprintf("%s/temp", outDir)

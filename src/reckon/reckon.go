@@ -115,10 +115,10 @@ func (this *Reckon) Compare(sm *gsema.Semaphore) {
 	this.SequenceProcessArrR = append(this.SequenceProcessArrR, this.SequenceProcessArr...)
 	this.SequenceProcessArrR = Reverse(this.SequenceProcessArrR)
 	this.SeqLen = len(this.SequenceProcessArr) - 1
-	var wgs sync.WaitGroup
+	sem := gsema.NewSemaphore(6)
 	for o1 := 0; o1 < 6; o1++ {
-		wgs.Add(1)
-		go func(wg *sync.WaitGroup, o int) {
+		sem.Add(1)
+		go func(sa *gsema.Semaphore, o int) {
 			CodonScore := make([]float64, 0)
 			TempStr := ""
 			if o < 3 {
@@ -204,10 +204,10 @@ func (this *Reckon) Compare(sm *gsema.Semaphore) {
 				MaxString = append(MaxString, OutStr)
 				LengthStoreArray = append(LengthStoreArray, seqLength)
 			}
-			wg.Done()
-		}(&wgs, o1)
+			sa.Done()
+		}(sem, o1)
 	}
-	wgs.Wait()
+	sem.Wait()
 	r_max_Value := MaxValue[:]
 	sort.Float64s(r_max_Value)
 	r_max_Value = ReverseFloats(r_max_Value)
@@ -250,8 +250,8 @@ func (this *Reckon) Compare(sm *gsema.Semaphore) {
 	this.MLCDS_sequenceR = Reverse(this.MLCDS_sequenceR)
 	this.MLCDS_seq_length = len(this.MLCDS_sequence) - 1
 	for o1 := 1; o1 < 6; o1++ {
-		wgs.Add(1)
-		go func(wg *sync.WaitGroup, o int) {
+		sem.Add(1)
+		go func(sa *gsema.Semaphore, o int) {
 			MLCDS_TempStr := ""
 			if o < 3 {
 				MLCDS_TempStr = InitCodonSeq(o, this.MLCDS_seq_length-1, 3, this.MLCDS_sequence)
@@ -279,10 +279,10 @@ func (this *Reckon) Compare(sm *gsema.Semaphore) {
 			MLCDS_array_Len = MLCDS_array_Len + 2
 			other_num = other_num / float64(MLCDS_array_Len)
 			OtherCdsArray = append(OtherCdsArray, other_num)
-			wg.Done()
-		}(&wgs, o1)
+			sa.Done()
+		}(sem, o1)
 	}
-	wgs.Wait()
+	sem.Wait()
 	score_distance := 0.0
 	for m := 0; m < len(OtherCdsArray); m++ {
 		score_distance += M_score - OtherCdsArray[m]
