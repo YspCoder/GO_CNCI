@@ -66,8 +66,16 @@ func ReadFileArray(path string) []string {
 	defer f.Close()
 	scanner := bufio.NewScanner(f)
 	fileArray := make([]string, 0)
-	for scanner.Scan() {
-		fileArray = append(fileArray, scanner.Text())
+	if strings.Contains(path, "GO_CNCI_file_score6") {
+		Warn("*******************************************************")
+		for scanner.Scan() {
+			Warn(scanner.Text())
+			fileArray = append(fileArray, scanner.Text())
+		}
+	} else {
+		for scanner.Scan() {
+			fileArray = append(fileArray, scanner.Text())
+		}
 	}
 	Info("Read file success filename : [%s]", path)
 	return fileArray
@@ -287,16 +295,27 @@ func StringToArray(params string) []string {
 
 func InitCodonSeq(num, length, step int, Arr []string) string {
 	TempStrPar := ""
+
 	for w := range XRangeInt(num, length, step) {
+		var code1, code2, code3 string
 		index := w
 		if index >= len(Arr) {
-			continue
+			code1 = "0"
+		} else {
+			code1 = Arr[index]
 		}
-		code1 := Arr[index]
 		index += 1
-		code2 := Arr[index]
+		if index >= len(Arr) {
+			code2 = "0"
+		} else {
+			code2 = Arr[index]
+		}
 		index += 1
-		code3 := Arr[index]
+		if index >= len(Arr) {
+			code3 = "0"
+		} else {
+			code3 = Arr[index]
+		}
 		Temp := code1 + code2 + code3
 		TempStrPar = TempStrPar + Temp + " "
 	}

@@ -20,14 +20,6 @@ import (
 	"sync"
 )
 
-var (
-	MaxValue         = make([]float64, 0)
-	MaxString        = make([]string, 0)
-	LengthStoreArray = make([]int, 0)
-	Pos              = make([]string, 0)
-	OtherCdsArray    = make([]float64, 0)
-)
-
 type Reckon struct {
 	TempScore           string
 	TempDetil           string
@@ -43,6 +35,7 @@ type Reckon struct {
 	MLCDS_sequenceR     []string
 	MLCDS_seq_length    int
 	HashMatrix          *sync.Map
+	Thread              int
 }
 
 func New() *Reckon {
@@ -61,6 +54,7 @@ func New() *Reckon {
 		MLCDS_sequenceR:     nil,
 		MLCDS_seq_length:    0,
 		HashMatrix:          nil,
+		Thread:              0,
 	}
 }
 
@@ -91,7 +85,7 @@ func (this *Reckon) Init(seam *gsema.Semaphore) {
 			fast_seq_Arr_tmp = append(fast_seq_Arr_tmp, sequence_Arr[n])
 		}
 	}
-	var sm = gsema.NewSemaphore(12)
+	var sm = gsema.NewSemaphore(this.Thread)
 	for d := 0; d < len(label_Arr_tmp); d++ {
 		if d == len(label_Arr_tmp) {
 			continue
@@ -109,6 +103,11 @@ func (this *Reckon) Init(seam *gsema.Semaphore) {
 
 func (this *Reckon) Compare(sm *gsema.Semaphore) {
 	defer sm.Done()
+	MaxValue := make([]float64, 0)
+	MaxString := make([]string, 0)
+	LengthStoreArray := make([]int, 0)
+	Pos := make([]string, 0)
+	OtherCdsArray := make([]float64, 0)
 	DetilLen := len(this.Seq)
 	tran_fir_seq := strings.ToLower(this.Seq)
 	tran_sec_seq := strings.ReplaceAll(tran_fir_seq, "u", "t")
@@ -119,8 +118,94 @@ func (this *Reckon) Compare(sm *gsema.Semaphore) {
 	var wgs sync.WaitGroup
 	for o1 := 0; o1 < 6; o1++ {
 		wgs.Add(1)
-		this.Rounds = o1
-		go this.multilayerComparison(&wgs)
+		go func(wg *sync.WaitGroup, o int) {
+			CodonScore := make([]float64, 0)
+			TempStr := ""
+			if o < 3 {
+				TempStr = InitCodonSeq(o, this.SeqLen-1, 3, this.SequenceProcessArr)
+			}
+			if 2 < o && o < 6 {
+				TempStr = InitCodonSeq(o-3, this.SeqLen-1, 3, this.SequenceProcessArrR)
+			}
+			TempArray := strings.Split(TempStr, " ")
+			TempArray = TempArray[:len(TempArray)-1]
+			seqLength := len(TempArray)
+			WindowStep := 50
+			WinLen := seqLength - WindowStep
+			if seqLength > WindowStep {
+				for EachCodon := 0; EachCodon < WinLen; EachCodon++ {
+					num := 0.0
+					SingleArray := make([]string, 0)
+					for t := range XRangeInt(EachCodon, WindowStep+EachCodon) {
+						SingleArray = append(SingleArray, TempArray[t])
+					}
+					SinLen := len(SingleArray) - 1
+					for n := 0; n < SinLen; n++ {
+						temp1 := SingleArray[n] + SingleArray[n+1]
+						byteMatchResult, _ := regexp.Match(`[atcg]{6}`, []byte(temp1))
+						if byteMatchResult {
+							if v9, ok := this.HashMatrix.Load(temp1); ok {
+								v8 := v9.(float64)
+								num = num + v8
+							} else {
+								continue
+							}
+
+						}
+					}
+					num = num / 50
+					CodonScore = append(CodonScore, num)
+				}
+				Start := 0
+				End := 0
+				Max := 0.0
+				for r := 0; r < len(CodonScore); r++ {
+					sum := 0.0
+					CodonLength := len(CodonScore)
+					for e := range XRangeInt(r, CodonLength) {
+						sum = sum + CodonScore[e]
+						if sum > Max {
+							Start = r
+							End = e
+							Max = sum
+						}
+					}
+				}
+				OutStr := ""
+				for out := Start; out < End+1; out++ {
+					OutStr = OutStr + TempArray[out] + " "
+				}
+				Start = Start * 3
+				End = End * 3
+				Position := fmt.Sprintf("%v %v", Start, End)
+				Pos = append(Pos, Position)
+				MaxValue = append(MaxValue, Max)
+				MaxString = append(MaxString, OutStr)
+				OutParray := strings.Split(OutStr, " ")
+				max_length := len(OutParray) - 1
+				LengthStoreArray = append(LengthStoreArray, max_length)
+			} else {
+				num := 0.0
+				for n := 0; n < seqLength-1; n++ {
+					temp1 := TempArray[n] + TempArray[n+1]
+					byteMatchResult, _ := regexp.Match(`[atcg]{6}`, []byte(temp1))
+					if byteMatchResult {
+						if v9, ok := this.HashMatrix.Load(temp1); ok {
+							v8 := v9.(float64)
+							num = num + v8
+						} else {
+							continue
+						}
+					}
+				}
+				OutStr := strings.Join(TempArray, " ")
+				Pos = append(Pos, "Full Length")
+				MaxValue = append(MaxValue, num)
+				MaxString = append(MaxString, OutStr)
+				LengthStoreArray = append(LengthStoreArray, seqLength)
+			}
+			wg.Done()
+		}(&wgs, o1)
 	}
 	wgs.Wait()
 	r_max_Value := MaxValue[:]
@@ -166,8 +251,36 @@ func (this *Reckon) Compare(sm *gsema.Semaphore) {
 	this.MLCDS_seq_length = len(this.MLCDS_sequence) - 1
 	for o1 := 1; o1 < 6; o1++ {
 		wgs.Add(1)
-		this.Rounds = o1
-		go this.multilayerComparisonTwo(&wgs)
+		go func(wg *sync.WaitGroup, o int) {
+			MLCDS_TempStr := ""
+			if o < 3 {
+				MLCDS_TempStr = InitCodonSeq(o, this.MLCDS_seq_length-1, 3, this.MLCDS_sequence)
+			}
+			if 2 < o && o < 6 {
+				MLCDS_TempStr = InitCodonSeq(o, this.MLCDS_seq_length-1, 3, this.MLCDS_sequenceR)
+			}
+			MLCDS_array := strings.Split(MLCDS_TempStr, " ")
+			MLCDS_array = MLCDS_array[:len(MLCDS_array)-1]
+			other_num := 0.0
+			MLCDS_array_Len := len(MLCDS_array) - 1
+			for j := 0; j < MLCDS_array_Len; j++ {
+				temp2 := MLCDS_array[j] + MLCDS_array[j+1]
+				byteMatchResult, _ := regexp.Match(`[atcg]{6}`, []byte(temp2))
+				if byteMatchResult {
+					if v9, ok := this.HashMatrix.Load(temp2); ok {
+						v8 := v9.(float64)
+						//v1, _ := strconv.ParseFloat(v8, 64)
+						other_num = other_num + v8
+					} else {
+						continue
+					}
+				}
+			}
+			MLCDS_array_Len = MLCDS_array_Len + 2
+			other_num = other_num / float64(MLCDS_array_Len)
+			OtherCdsArray = append(OtherCdsArray, other_num)
+			wg.Done()
+		}(&wgs, o1)
 	}
 	wgs.Wait()
 	score_distance := 0.0
@@ -194,21 +307,22 @@ func (this *Reckon) Compare(sm *gsema.Semaphore) {
 	}
 	length_precent := float64(M_length) / length_total_score
 	Coding_Array_one := make([]string, 0)
+	codonArr := GetAlphabetMap()
 	for n := 0; n < len(o_arr); n++ {
 		temp1 := o_arr[n]
 		byteMatchResult, _ := regexp.Match(`[atcg{3}]`, []byte(temp1))
 		if byteMatchResult && temp1 != "taa" && temp1 != "tag" && temp1 != "tga" {
-			if v, ok := this.HashMatrix.Load(temp1); ok {
+			if v, ok := codonArr.Load(temp1); ok {
 				v1 := v.(int)
 				v2 := v1 + 1
-				this.HashMatrix.LoadOrStore(temp1, v2)
+				codonArr.LoadOrStore(temp1, v2)
 			}
 		}
 	}
 
-	this.HashMatrix.Range(func(key, value interface{}) bool {
-		v := value.(float64)
-		Coding_Array_one = append(Coding_Array_one, strconv.FormatFloat(v, 'f', 15, 64))
+	codonArr.Range(func(key, value interface{}) bool {
+		v := fmt.Sprintf("%v", value)
+		Coding_Array_one = append(Coding_Array_one, v)
 		return true
 	})
 	C_num1 := 0.0
@@ -226,7 +340,7 @@ func (this *Reckon) Compare(sm *gsema.Semaphore) {
 	}
 	Array_Str := strings.Join(Coding_Array_one, " ")
 	PROPERTY_STR := fmt.Sprintf("%v %v %v %v %v %v\n", M, M_length, M_score, length_precent, score_distance, Array_Str)
-	DETIL_STR := fmt.Sprintf("%v;;;;;%v %v %v\n", this.Label, out_pos, M_score, DetilLen)
+	DETIL_STR := fmt.Sprintf("%v;;;;; %v %v %v\n", this.Label, out_pos, M_score, DetilLen)
 	score, err := os.OpenFile(this.TempScore, os.O_APPEND|os.O_WRONLY, os.ModeAppend)
 	if err != nil {
 		Error("OpenFile : [%s] Err : [%s]", this.TempScore, err.Error())
@@ -245,136 +359,4 @@ func (this *Reckon) Compare(sm *gsema.Semaphore) {
 	if err != nil {
 		Error("WriteString Err : [%s]", err.Error())
 	}
-}
-
-func (this *Reckon) multilayerComparison(wg *sync.WaitGroup) {
-	defer wg.Done()
-	CodonScore := make([]float64, 0)
-	TempStr := ""
-	if this.Rounds < 3 {
-		TempStr = InitCodonSeq(this.Rounds, this.SeqLen-1, 3, this.SequenceProcessArr)
-	}
-	if 2 < this.Rounds && this.Rounds < 6 {
-		TempStr = InitCodonSeq(this.Rounds-3, this.SeqLen-1, 3, this.SequenceProcessArrR)
-	}
-	TempArray := strings.Split(TempStr, " ")
-	TempArray = TempArray[:len(TempArray)-1]
-	seqLength := len(TempArray)
-	WindowStep := 50
-	WinLen := seqLength - WindowStep
-	if seqLength > WindowStep {
-		for EachCodon := 0; EachCodon < WinLen; EachCodon++ {
-			num := 0.0
-			SingleArray := make([]string, 0)
-			for t := range XRangeInt(EachCodon, WindowStep+EachCodon) {
-				SingleArray = append(SingleArray, TempArray[t])
-			}
-			SinLen := len(SingleArray) - 1
-			for n := 0; n < SinLen; n++ {
-				temp1 := SingleArray[n] + SingleArray[n+1]
-				byteMatchResult, _ := regexp.Match(`[atcg]{6}`, []byte(temp1))
-				if byteMatchResult {
-					if v9, ok := this.HashMatrix.Load(temp1); ok {
-						v8 := v9.(float64)
-						num = num + v8
-					} else {
-						continue
-					}
-				}
-			}
-			num = num / 50
-			CodonScore = append(CodonScore, num)
-		}
-		Start := 0
-		End := 0
-		Max := 0.0
-		for r := 0; r < len(CodonScore); r++ {
-			sum := 0.0
-			CodonLength := len(CodonScore)
-			for e := range XRangeInt(r, CodonLength) {
-				sum = sum + CodonScore[e]
-				if sum > Max {
-					Start = r
-					End = e
-					Max = sum
-				}
-			}
-		}
-		OutStr := ""
-		for out := Start; out < End+1; out++ {
-			OutStr = OutStr + TempArray[out] + " "
-		}
-		Start = Start * 3
-		End = End * 3
-		Position := fmt.Sprintf("%v %v", Start, End)
-		Pos = append(Pos, Position)
-		MaxValue = append(MaxValue, Max)
-		MaxString = append(MaxString, OutStr)
-		OutParray := strings.Split(OutStr, " ")
-		max_length := len(OutParray) - 1
-		Onum := 0.0
-		for n := 0; n < max_length; n++ {
-			temp1 := OutParray[n] + OutParray[n+1]
-			byteMatchResult, _ := regexp.Match(`[atcg]{6}`, []byte(temp1))
-			if byteMatchResult {
-				if v9, ok := this.HashMatrix.Load(temp1); ok {
-					v8 := v9.(float64)
-					Onum = Onum + v8
-				} else {
-					continue
-				}
-			}
-		}
-		LengthStoreArray = append(LengthStoreArray, max_length)
-	} else {
-		num := 0.0
-		for n := 0; n < seqLength-1; n++ {
-			temp1 := TempArray[n] + TempArray[n+1]
-			byteMatchResult, _ := regexp.Match(`[atcg]{6}`, []byte(temp1))
-			if byteMatchResult {
-				if v9, ok := this.HashMatrix.Load(temp1); ok {
-					v8 := v9.(float64)
-					//v1, _ := strconv.ParseFloat(v8, 64)
-					num = num + v8
-				} else {
-					continue
-				}
-			}
-		}
-		OutStr := strings.Join(TempArray, " ")
-		Pos = append(Pos, "Full Length")
-		MaxValue = append(MaxValue, num)
-		MaxString = append(MaxString, OutStr)
-		LengthStoreArray = append(LengthStoreArray, seqLength)
-	}
-}
-
-func (this *Reckon) multilayerComparisonTwo(wg *sync.WaitGroup) {
-	defer wg.Done()
-	MLCDS_TempStr := ""
-	if this.Rounds < 3 {
-		MLCDS_TempStr = InitCodonSeq(this.Rounds, this.MLCDS_seq_length-1, 3, this.MLCDS_sequence)
-	}
-	if 2 < this.Rounds && this.Rounds < 6 {
-		MLCDS_TempStr = InitCodonSeq(this.Rounds, this.MLCDS_seq_length-1, 3, this.MLCDS_sequenceR)
-	}
-	MLCDS_array := strings.Split(MLCDS_TempStr, " ")
-	MLCDS_array = MLCDS_array[:len(MLCDS_array)-1]
-	other_num := 0.0
-	MLCDS_array_Len := len(MLCDS_array) - 1
-	for j := 0; j < MLCDS_array_Len; j++ {
-		temp2 := MLCDS_array[j] + MLCDS_array[j+1]
-		byteMatchResult, _ := regexp.Match(`[atcg]{6}`, []byte(temp2))
-		if byteMatchResult {
-			if v9, ok := this.HashMatrix.Load(temp2); ok {
-				v8 := v9.(float64)
-				other_num = other_num + v8
-			} else {
-				continue
-			}
-		}
-	}
-	MLCDS_array_Len = MLCDS_array_Len + 2
-	other_num = other_num / float64(MLCDS_array_Len)
-	OtherCdsArray = append(OtherCdsArray, other_num)
 }

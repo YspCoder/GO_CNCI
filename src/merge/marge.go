@@ -9,36 +9,65 @@ package merge
 
 import (
 	. "GO_CNCI/src/base"
-	"GO_CNCI/src/utils"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"strconv"
 	"strings"
 )
 
-func Merge(inputDir, outfile string, number int) ([]string, error) {
-	scoreArray := make([]string, 0)
-	detilArray := make([]string, 0)
+func Merge(inputDir, score_path, detil_path string, number int) error {
+
+	score, err := os.Create(score_path)
+	if err != nil {
+		Error("Create GO_CNCI_score Err : [%s]", err.Error())
+		return err
+	}
+
+	detil, err := os.Create(detil_path)
+	if err != nil {
+		Error("Create GO_CNCI_detil Err : [%s]", err.Error())
+		return err
+	}
 	for i := 1; i <= number; i++ {
 		Score_string := fmt.Sprintf("%s/GO_CNCI_file_score%v", inputDir, i)
-		_score := utils.ReadFileArray(Score_string)
-		scoreArray = append(scoreArray, _score...)
+		f, err := os.OpenFile(Score_string, os.O_RDONLY, os.ModePerm)
+		if err != nil {
+			Error("OpenFile GO_CNCI_file_score Err : [%s]", err.Error())
+			return err
+		}
+		b, err := ioutil.ReadAll(f)
+		if err != nil {
+			Error("ReadAll GO_CNCI_file_score Err : [%s]", err.Error())
+			return err
+		}
+		_, _ = score.Write(b)
+		_ = f.Close()
 	}
 	for i := 1; i <= number; i++ {
 		Detil_string := fmt.Sprintf("%s/GO_CNCI_file_detil%v", inputDir, i)
-		_detil := utils.ReadFileArray(Detil_string)
-		detilArray = append(detilArray, _detil...)
+		f, err := os.OpenFile(Detil_string, os.O_RDONLY, os.ModePerm)
+		if err != nil {
+			Error("OpenFile GO_CNCI_file_detil Err : [%s]", err.Error())
+			return err
+		}
+		b, err := ioutil.ReadAll(f)
+		if err != nil {
+			Error("ReadAll GO_CNCI_file_detil Err : [%s]", err.Error())
+			return err
+		}
+		_, _ = detil.Write(b)
+		_ = f.Close()
 	}
-	AddSvmLabel(scoreArray, outfile)
-	return detilArray, nil
+	return nil
 }
 
-func AddSvmLabel(rec []string, FileName string) {
+func AddSvmLabel(rec []string, FileName string) error {
 	SVM_arr_store := []string{}
 	SVM_FILE_ONE, err := os.Create(FileName)
 	if err != nil {
 		Error("Create error![%v]\n", err.Error())
-		return
+		return err
 	}
 	for i := 0; i < len(rec); i++ {
 		temp_str := rec[i]
@@ -56,4 +85,5 @@ func AddSvmLabel(rec []string, FileName string) {
 		}
 	}
 	defer SVM_FILE_ONE.Close()
+	return nil
 }

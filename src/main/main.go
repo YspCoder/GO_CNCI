@@ -62,15 +62,29 @@ func main() {
 		rk.TempInput = fmt.Sprintf("%s/GO_CNCI_file%v", out_temp, i)
 		rk.TempScore = fmt.Sprintf("%s/GO_CNCI_file_score%v", out_temp, i)
 		rk.TempDetil = fmt.Sprintf("%s/GO_CNCI_file_detil%v", out_temp, i)
+		rk.Thread = thread
 		go rk.Init(sema)
 	}
 	sema.Wait()
 	Info("--------End of calculation-------")
 	outfile := fmt.Sprintf("%s/pro", outDir)
 	Info("---------Start merging files--------")
-	detilArray, err := merge.Merge(out_temp, outfile, number)
+	score_path := fmt.Sprintf("%s/GO_CNCI_score", outDir)
+	detil_path := fmt.Sprintf("%s/GO_CNCI_detil", outDir)
+	err = merge.Merge(out_temp, score_path, detil_path, number)
 	if err != nil {
 		Error("Merge err : [%s]", err.Error())
+		return
+	}
+	score_array := ReadFileArray(score_path)
+	scoreSLength := len(score_array) - 1
+	score_array = score_array[:scoreSLength]
+	detil_array := ReadFileArray(detil_path)
+	detilSLength := len(detil_array) - 1
+	detil_array = detil_array[:detilSLength]
+	err = merge.AddSvmLabel(score_array, outfile)
+	if err != nil {
+		Error("AddSvmLabel err : [%s]", err.Error())
 		return
 	}
 	Info("---------End of merge file-------")
@@ -85,7 +99,7 @@ func main() {
 	}
 	Info("----------End of vector calculation--------")
 	Info("Start output file")
-	FirResult := PutResult(detilArray, SvmFile)
+	FirResult := PutResult(detil_array, SvmFile)
 	SvmFinalResult := fmt.Sprintf("%s/GO_CNCI.index", outDir)
 	PrintResult(FirResult, SvmFinalResult)
 	Info("---------End of output file----------")
