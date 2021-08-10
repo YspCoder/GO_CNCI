@@ -7,23 +7,48 @@ import (
 	. "GO_CNCI/src/utils"
 	"fmt"
 	"github.com/EDDYCJY/gsema"
+	"os"
+	"strconv"
 	"time"
 )
 
 func main() {
 	start := time.Now()
-	CNCI_matrix := "./CNCI_Parameters/CNCI_matrix"
-	inputFile := "./94d6346_candidate.fa"
-	number := 6
-	out_temp := "./test"
-	logFile := "./"
-	sema := gsema.NewSemaphore(12)
-	hashMatrix := ReadFileMatrix(CNCI_matrix)
+	if len(os.Args) < 6 {
+		Info("Insufficient required parameters")
+		Info("./GO_CNCI reference_folder inputFile number_of_file_partitions outDir libsvmpath thread")
+		Info("./GO_CNCI ./CNCI_Parameters ./94d6346_candidate.fa 10 ./test ./libsvm 8")
+		return
+	}
+	CNCI_Parameters := os.Args[1]
+	inputFile := os.Args[2]
+	number, err := strconv.Atoi(os.Args[3])
+	if err != nil {
+		Info("Please enter a positive integer")
+		return
+	}
+	outDir := os.Args[4]
+	libsvm_path := os.Args[5]
+	thread, err := strconv.Atoi(os.Args[6])
+	if err != nil {
+		Info("Please enter a positive integer")
+		return
+	}
+	out_temp := fmt.Sprintf("%s/temp", outDir)
+	if !PathExists(out_temp) {
+		err := os.MkdirAll(out_temp, os.ModePerm)
+		if err != nil {
+			Error("Create Temp Err : [%s]", err.Error())
+			return
+		}
+	}
+	sema := gsema.NewSemaphore(thread)
+	hashMatrix := ReadFileMatrix(CNCI_Parameters + "/CNCI_matrix")
 	sequence_Arr := ReadFileArray(inputFile)
 	sLen := len(sequence_Arr) - 1
 	sequence_Arr = sequence_Arr[:sLen]
 	fastArray := TwoLineFasta(sequence_Arr)
-	Label_Array, Fasta_Seq_Array := Tran_checkSeq(fastArray, logFile)
+	Label_Array, Fasta_Seq_Array := Tran_checkSeq(fastArray)
 
 	TOT_STRING := GetLabelArray(Label_Array, Fasta_Seq_Array)
 	Info("-------Start splitting file------")
@@ -41,7 +66,7 @@ func main() {
 	}
 	sema.Wait()
 	Info("--------End of calculation-------")
-	outfile := fmt.Sprintf("%s/pro", out_temp)
+	outfile := fmt.Sprintf("%s/pro", outDir)
 	Info("---------Start merging files--------")
 	detilArray, err := merge.Merge(out_temp, outfile, number)
 	if err != nil {
@@ -49,11 +74,11 @@ func main() {
 		return
 	}
 	Info("---------End of merge file-------")
-	SvmPutFileName := fmt.Sprintf("%s/svm", out_temp)
-	SvmFile := fmt.Sprintf("%s/file", out_temp)
-	SvmTmp := fmt.Sprintf("%s/tmp", out_temp)
+	SvmPutFileName := fmt.Sprintf("%s/svm", outDir)
+	SvmFile := fmt.Sprintf("%s/file", outDir)
+	SvmTmp := fmt.Sprintf("%s/tmp", outDir)
 	Info("-------Start vector calculation------")
-	err = Libsvm(outfile, SvmPutFileName, SvmFile, SvmTmp)
+	err = Libsvm(outfile, SvmPutFileName, SvmFile, SvmTmp, libsvm_path, CNCI_Parameters)
 	if err != nil {
 		Error("Libsvm err : [%s]", err.Error())
 		return
@@ -61,8 +86,8 @@ func main() {
 	Info("----------End of vector calculation--------")
 	Info("Start output file")
 	FirResult := PutResult(detilArray, SvmFile)
-	SvmFinalResutl := fmt.Sprintf("%s/GO_CNCI.index", out_temp)
-	PrintResult(FirResult, SvmFinalResutl)
+	SvmFinalResult := fmt.Sprintf("%s/GO_CNCI.index", outDir)
+	PrintResult(FirResult, SvmFinalResult)
 	Info("---------End of output file----------")
 	cost := time.Since(start)
 	Info("Time use [%s]", cost)

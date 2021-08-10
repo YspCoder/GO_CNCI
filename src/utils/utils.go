@@ -138,13 +138,13 @@ func SplitFile(files []string, number int, out string) {
 	}
 }
 
-func Libsvm(filepath, outSvm, outfile, outTmp string) error {
-	err := CmdBash("bash", "-c", "./libsvm-3.0/svm-scale -r ./CNCI_Parameters/python_scale "+filepath+" > "+outSvm)
+func Libsvm(filepath, outSvm, outfile, outTmp, libsvm_path, CNCI_Parameters string) error {
+	err := CmdBash("bash", "-c", libsvm_path+"/svm-scale -r "+CNCI_Parameters+"/python_scale "+filepath+" > "+outSvm)
 	if err != nil {
 		Error("svm-scale err [%s]", err.Error())
 		return err
 	}
-	err = CmdBash("bash", "-c", "./libsvm-3.0/svm-predict "+outSvm+" ./CNCI_Parameters/python_model "+outfile+" > "+outTmp)
+	err = CmdBash("bash", "-c", libsvm_path+"/svm-predict "+outSvm+" "+CNCI_Parameters+"/python_model "+outfile+" > "+outTmp)
 	if err != nil {
 		Error("svm-predict err [%s]", err.Error())
 		return err
@@ -303,7 +303,18 @@ func InitCodonSeq(num, length, step int, Arr []string) string {
 	return TempStrPar
 }
 
-func Tran_checkSeq(input_arr []string, Temp_Log string) ([]string, []string) {
+func PathExists(path string) bool {
+	_, err := os.Stat(path)
+	if err == nil {
+		return true
+	}
+	if os.IsNotExist(err) {
+		return false
+	}
+	return false
+}
+
+func Tran_checkSeq(input_arr []string) ([]string, []string) {
 	label_Arr := make([]string, 0)
 	FastA_seq_Arr := make([]string, 0)
 	for n := 0; n < len(input_arr); n++ {
@@ -313,74 +324,54 @@ func Tran_checkSeq(input_arr []string, Temp_Log string) ([]string, []string) {
 			FastA_seq_Arr = append(FastA_seq_Arr, input_arr[n])
 		}
 	}
-	LogResult := fmt.Sprintf("%v_cnci.log", Temp_Log)
-	LOG_FILE, _ := os.Create(LogResult)
 	num := 0
 	for i := 0; i < len(label_Arr); i++ {
-		Label := label_Arr[num]
 		Seq := FastA_seq_Arr[num]
 		tran_fir_seq := strings.ToLower(Seq)
 		tran_sec_seq_one := strings.ReplaceAll(tran_fir_seq, "u", "t")
 		tran_sec_seq := strings.ReplaceAll(tran_sec_seq_one, "\r", "")
 		if strings.Contains(tran_sec_seq, "n") {
-			LogString := fmt.Sprintf("%v contain unknow nucleotide (n),please checkout your sequence again\n", Label)
-			_, _ = LOG_FILE.WriteString(LogString)
 			label_Arr = append(label_Arr[:num], label_Arr[num+1:]...)
 			FastA_seq_Arr = append(FastA_seq_Arr[:num], FastA_seq_Arr[num+1:]...)
 			continue
 		}
 		if strings.Contains(tran_sec_seq, "n") {
-			LogString := fmt.Sprintf("%v contain unknow nucleotide (n),please checkout your sequence again\n", Label)
-			_, _ = LOG_FILE.WriteString(LogString)
 			label_Arr = append(label_Arr[:num], label_Arr[num+1:]...)
 			FastA_seq_Arr = append(FastA_seq_Arr[:num], FastA_seq_Arr[num+1:]...)
 			continue
 		}
 		if strings.Contains(tran_sec_seq, "w") {
-			LogString := fmt.Sprintf("%v contain unknow nucleotide (w),please checkout your sequence again\n", Label)
-			_, _ = LOG_FILE.WriteString(LogString)
 			label_Arr = append(label_Arr[:num], label_Arr[num+1:]...)
 			FastA_seq_Arr = append(FastA_seq_Arr[:num], FastA_seq_Arr[num+1:]...)
 			continue
 		}
 		if strings.Contains(tran_sec_seq, "d") {
-			LogString := fmt.Sprintf("%v contain unknow nucleotide (d),please checkout your sequence again\n", Label)
-			_, _ = LOG_FILE.WriteString(LogString)
 			label_Arr = append(label_Arr[:num], label_Arr[num+1:]...)
 			FastA_seq_Arr = append(FastA_seq_Arr[:num], FastA_seq_Arr[num+1:]...)
 			continue
 		}
 		if strings.Contains(tran_sec_seq, "r") {
-			LogString := fmt.Sprintf("%v contain unknow nucleotide (r),please checkout your sequence again\n", Label)
-			_, _ = LOG_FILE.WriteString(LogString)
 			label_Arr = append(label_Arr[:num], label_Arr[num+1:]...)
 			FastA_seq_Arr = append(FastA_seq_Arr[:num], FastA_seq_Arr[num+1:]...)
 			continue
 		}
 		if strings.Contains(tran_sec_seq, "s") {
-			LogString := fmt.Sprintf("%v contain unknow nucleotide (s),please checkout your sequence again\n", Label)
-			_, _ = LOG_FILE.WriteString(LogString)
 			label_Arr = append(label_Arr[:num], label_Arr[num+1:]...)
 			FastA_seq_Arr = append(FastA_seq_Arr[:num], FastA_seq_Arr[num+1:]...)
 			continue
 		}
 		if strings.Contains(tran_sec_seq, "y") {
-			LogString := fmt.Sprintf("%v contain unknow nucleotide (y),please checkout your sequence again\n", Label)
-			_, _ = LOG_FILE.WriteString(LogString)
 			label_Arr = append(label_Arr[:num], label_Arr[num+1:]...)
 			FastA_seq_Arr = append(FastA_seq_Arr[:num], FastA_seq_Arr[num+1:]...)
 			continue
 		}
 		if strings.Contains(tran_sec_seq, "m") {
-			LogString := fmt.Sprintf("%v contain unknow nucleotide (m),please checkout your sequence again\n", Label)
-			_, _ = LOG_FILE.WriteString(LogString)
 			label_Arr = append(label_Arr[:num], label_Arr[num+1:]...)
 			FastA_seq_Arr = append(FastA_seq_Arr[:num], FastA_seq_Arr[num+1:]...)
 			continue
 		}
 		num = num + 1
 	}
-	defer LOG_FILE.Close()
 	return label_Arr, FastA_seq_Arr
 }
 
