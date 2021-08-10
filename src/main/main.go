@@ -14,22 +14,17 @@ import (
 
 func main() {
 	start := time.Now()
-	if len(os.Args) < 6 {
+	if len(os.Args) < 5 {
 		Info("Insufficient required parameters")
-		Info("./GO_CNCI reference_folder inputFile number_of_file_partitions outDir libsvmpath thread")
-		Info("./GO_CNCI ./CNCI_Parameters ./94d6346_candidate.fa 10 ./test ./libsvm 8")
+		Info("./GO_CNCI reference_folder inputFile outDir libsvmpath thread")
+		Info("./GO_CNCI ./CNCI_Parameters ./94d6346_candidate.fa ./test ./libsvm 8")
 		return
 	}
 	CNCI_Parameters := os.Args[1]
 	inputFile := os.Args[2]
-	number, err := strconv.Atoi(os.Args[3])
-	if err != nil {
-		Info("Please enter a positive integer -- number_of_file_partitions")
-		return
-	}
-	outDir := os.Args[4]
-	libsvm_path := os.Args[5]
-	thread, err := strconv.Atoi(os.Args[6])
+	outDir := os.Args[3]
+	libsvm_path := os.Args[4]
+	thread, err := strconv.Atoi(os.Args[5])
 	if err != nil {
 		Info("Please enter a positive integer -- thread")
 		return
@@ -51,11 +46,11 @@ func main() {
 
 	TOT_STRING := GetLabelArray(Label_Array, Fasta_Seq_Array)
 	Info("-------Start splitting file------")
-	SplitFile(TOT_STRING, number, out_temp)
+	SplitFile(TOT_STRING, thread, out_temp)
 	Info("--------End of split file-------")
 	Info("--------Start calculation-------")
 	var wgs sync.WaitGroup
-	for i := 1; i <= number; i++ {
+	for i := 1; i <= thread; i++ {
 		wgs.Add(1)
 		rk := reckon.New()
 		rk.HashMatrix = hashMatrix
@@ -71,7 +66,7 @@ func main() {
 	Info("---------Start merging files--------")
 	score_path := fmt.Sprintf("%s/GO_CNCI_score", outDir)
 	detil_path := fmt.Sprintf("%s/GO_CNCI_detil", outDir)
-	err = merge.Merge(out_temp, score_path, detil_path, number)
+	err = merge.Merge(out_temp, score_path, detil_path, thread)
 	if err != nil {
 		Error("Merge err : [%s]", err.Error())
 		return
