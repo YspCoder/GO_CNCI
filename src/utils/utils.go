@@ -289,6 +289,9 @@ func InitCodonSeq(num, length, step int, Arr []string) string {
 	TempStrPar := ""
 	for w := range XRangeInt(num, length, step) {
 		index := w
+		if index >= len(Arr) {
+			continue
+		}
 		code1 := Arr[index]
 		index += 1
 		code2 := Arr[index]

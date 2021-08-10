@@ -91,11 +91,17 @@ func (this *Reckon) Init(seam *gsema.Semaphore) {
 			fast_seq_Arr_tmp = append(fast_seq_Arr_tmp, sequence_Arr[n])
 		}
 	}
-	sm := gsema.NewSemaphore(12)
+	var sm = gsema.NewSemaphore(12)
 	for d := 0; d < len(label_Arr_tmp); d++ {
-		sm.Add(1)
+		if d == len(label_Arr_tmp) {
+			continue
+		}
 		this.Label = label_Arr_tmp[d]
+		if d == len(fast_seq_Arr_tmp) {
+			continue
+		}
 		this.Seq = fast_seq_Arr_tmp[d]
+		sm.Add(1)
 		go this.Compare(sm)
 	}
 	sm.Wait()
