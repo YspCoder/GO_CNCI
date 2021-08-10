@@ -58,8 +58,8 @@ func New() *Reckon {
 	}
 }
 
-func (this *Reckon) Init(seam *gsema.Semaphore) {
-	defer seam.Done()
+func (this *Reckon) Init(wg *sync.WaitGroup) {
+	defer wg.Done()
 	var err error
 	score, err := os.Create(this.TempScore)
 	if err != nil {

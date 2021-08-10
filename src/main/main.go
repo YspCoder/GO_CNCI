@@ -6,9 +6,9 @@ import (
 	"GO_CNCI/src/reckon"
 	. "GO_CNCI/src/utils"
 	"fmt"
-	"github.com/EDDYCJY/gsema"
 	"os"
 	"strconv"
+	"sync"
 	"time"
 )
 
@@ -42,7 +42,6 @@ func main() {
 			return
 		}
 	}
-	sema := gsema.NewSemaphore(thread)
 	hashMatrix := ReadFileMatrix(CNCI_Parameters + "/CNCI_matrix")
 	sequence_Arr := ReadFileArray(inputFile)
 	sLen := len(sequence_Arr) - 1
@@ -55,17 +54,18 @@ func main() {
 	SplitFile(TOT_STRING, number, out_temp)
 	Info("--------End of split file-------")
 	Info("--------Start calculation-------")
+	var wgs sync.WaitGroup
 	for i := 1; i <= number; i++ {
-		sema.Add(1)
+		wgs.Add(1)
 		rk := reckon.New()
 		rk.HashMatrix = hashMatrix
 		rk.TempInput = fmt.Sprintf("%s/GO_CNCI_file%v", out_temp, i)
 		rk.TempScore = fmt.Sprintf("%s/GO_CNCI_file_score%v", out_temp, i)
 		rk.TempDetil = fmt.Sprintf("%s/GO_CNCI_file_detil%v", out_temp, i)
 		rk.Thread = thread
-		go rk.Init(sema)
+		go rk.Init(&wgs)
 	}
-	sema.Wait()
+	wgs.Wait()
 	Info("--------End of calculation-------")
 	outfile := fmt.Sprintf("%s/pro", outDir)
 	Info("---------Start merging files--------")
