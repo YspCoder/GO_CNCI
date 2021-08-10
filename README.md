@@ -1,6 +1,6 @@
 # GO_CNCI
 ## About GO_CNCI
-
+#### CPU resource consumption 100%+
 
 
 
