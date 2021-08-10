@@ -58,7 +58,7 @@ func New() *Reckon {
 	}
 }
 
-func (this *Reckon) Init(wg *sync.WaitGroup) {
+func (this *Reckon) Init(wg *gsema.Semaphore) {
 	defer wg.Done()
 	var err error
 	score, err := os.Create(this.TempScore)
