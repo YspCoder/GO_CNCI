@@ -2,8 +2,6 @@
 ## About GO_CNCI
  CPU resource consumption 100%+
 
-## Current Version
-Release : GO_CNCI version 0.0.1 August 10, 2021
 ## Documentation
 ```
 The input file is gffread output
