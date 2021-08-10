@@ -9,9 +9,9 @@ Release : GO_CNCI version 0.0.1 August 10, 2021
 # Documentation
 
 # Install CNCI
-git clone https://github.com/yingfeikeji/GO_CNCI.git
-cd src/main
-go build main.go
+### git clone https://github.com/yingfeikeji/GO_CNCI.git
+### cd src/main
+### go build main.go
 # EXAMPLE
 The input file is gffread output
 ./GO_CNCI reference_folder inputFile number_of_file_partitions outDir libsvmpath thread
