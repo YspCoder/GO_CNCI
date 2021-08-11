@@ -189,7 +189,7 @@ func PrintResult(result []string, outDetil string) {
 		Error("PrintResult Err : [%s]", err.Error())
 		return
 	}
-	Tabel := "Transcript ID" + "\t" + "index" + "\t" + "score" + "\t" + "start" + "\t" + "end" + "\t" + "length" + "\n"
+	Tabel := "TranscriptId" + "\t" + "index" + "\t" + "score" + "\t" + "start" + "\t" + "end" + "\t" + "length" + "\n"
 	_, _ = OutFileResult.WriteString(Tabel)
 	for i := 0; i < len(result); i++ {
 		out_label := result[i]
@@ -201,11 +201,9 @@ func PrintResult(result []string, outDetil string) {
 		start_position := out_label_arr[2]
 		stop_position := out_label_arr[3]
 		value := out_label_arr[4]
-		fmt.Println(i)
 		out_value := substring(value)
 		v1, _ := strconv.ParseFloat(out_value, 64)
 		T_length := out_label_arr[5]
-		fmt.Println(out_label_arr[5])
 		if v1 == 0 {
 			v1 = v1 + 0.001
 		}
@@ -216,26 +214,26 @@ func PrintResult(result []string, outDetil string) {
 			if v3 > 0 {
 				if v3 > 1 {
 					v4 := -1 / v3
-					temp_out_str = fmt.Sprintf("%v\t%v\t%v\t%v\t%v\t%v\n", Tabel_label, property, v4, start_position, stop_position, T_length)
+					temp_out_str = fmt.Sprintf("%v\t%v\t%.5f\t%v\t%v\t%v\n", Tabel_label, property, v4, start_position, stop_position, T_length)
 				} else {
 					v4 := -1 * v3
-					temp_out_str = fmt.Sprintf("%v\t%v\t%v\t%v\t%v\t%v\n", Tabel_label, property, v4, start_position, stop_position, T_length)
+					temp_out_str = fmt.Sprintf("%v\t%v\t%.5f\t%v\t%v\t%v\n", Tabel_label, property, v4, start_position, stop_position, T_length)
 				}
 			}
 		} else {
-			temp_out_str = fmt.Sprintf("%v\t%v\t%v\t%v\t%v\t%v\n", Tabel_label, property, v1, start_position, stop_position, T_length)
+			temp_out_str = fmt.Sprintf("%v\t%v\t%.5f\t%v\t%v\t%v\n", Tabel_label, property, v1, start_position, stop_position, T_length)
 		}
 		if property == "coding" {
 			if v1 <= 0 {
 				if v1 <= -1 {
 					v2 := -1 / v1
-					temp_out_str = fmt.Sprintf("%v\t%v\t%v\t%v\t%v\t%v\n", Tabel_label, property, v2, start_position, stop_position, T_length)
+					temp_out_str = fmt.Sprintf("%v\t%v\t%.5f\t%v\t%v\t%v\n", Tabel_label, property, v2, start_position, stop_position, T_length)
 				} else {
 					v2 := -1 * v1
-					temp_out_str = fmt.Sprintf("%v\t%v\t%v\t%v\t%v\t%v\n", Tabel_label, property, v2, start_position, stop_position, T_length)
+					temp_out_str = fmt.Sprintf("%v\t%v\t%.5f\t%v\t%v\t%v\n", Tabel_label, property, v2, start_position, stop_position, T_length)
 				}
 			} else {
-				temp_out_str = fmt.Sprintf("%v\t%v\t%v\t%v\t%v\t%v\n", Tabel_label, property, v1, start_position, stop_position, T_length)
+				temp_out_str = fmt.Sprintf("%v\t%v\t%.5f\t%v\t%v\t%v\n", Tabel_label, property, v1, start_position, stop_position, T_length)
 
 			}
 		}
@@ -283,6 +281,12 @@ func ReverseFloats(params []float64) []float64 {
 	}
 	return params
 }
+func ReverseFloats32(params []float32) []float32 {
+	for i, j := 0, len(params)-1; i < j; i, j = i+1, j-1 {
+		params[i], params[j] = params[j], params[i]
+	}
+	return params
+}
 
 func StringToArray(params string) []string {
 	paramsCharAr := []byte(params) //把字符串转为字节数组，每一位存储的是该字符对应的ASCII码
@@ -295,27 +299,13 @@ func StringToArray(params string) []string {
 
 func InitCodonSeq(num, length, step int, Arr []string) string {
 	TempStrPar := ""
-
 	for w := range XRangeInt(num, length, step) {
-		var code1, code2, code3 string
 		index := w
-		if index >= len(Arr) {
-			code1 = "0"
-		} else {
-			code1 = Arr[index]
-		}
+		code1 := Arr[index]
 		index += 1
-		if index >= len(Arr) {
-			code2 = "0"
-		} else {
-			code2 = Arr[index]
-		}
+		code2 := Arr[index]
 		index += 1
-		if index >= len(Arr) {
-			code3 = "0"
-		} else {
-			code3 = Arr[index]
-		}
+		code3 := Arr[index]
 		Temp := code1 + code2 + code3
 		TempStrPar = TempStrPar + Temp + " "
 	}
@@ -394,8 +384,8 @@ func Tran_checkSeq(input_arr []string) ([]string, []string) {
 	return label_Arr, FastA_seq_Arr
 }
 
-func ReadFileMatrix(path string) *sync.Map {
-	var matrix = &sync.Map{}
+func ReadFileMatrix(path string) map[string]string {
+	matrix := make(map[string]string, 0)
 	f, err := os.Open(path)
 	if err != nil {
 		Error("Read file fail : %s", err.Error())
@@ -405,11 +395,31 @@ func ReadFileMatrix(path string) *sync.Map {
 	for scanner.Scan() {
 		line := scanner.Text()
 		params := strings.Split(line, "\t")
-		v, _ := strconv.ParseFloat(params[1], 64)
-		matrix.Store(params[0], v)
+		matrix[params[0]] = params[1]
 	}
 	return matrix
 }
+
+//func ReadFileMatrix(path string) map[string]string {
+//	matrix := make(map[string]string, 0)
+//	f, err := os.Open(path)
+//	if err != nil {
+//		Error("Read file fail : %s", err.Error())
+//	}
+//	defer f.Close()
+//	scanner := bufio.NewScanner(f)
+//	for scanner.Scan() {
+//		line := scanner.Text()
+//		params := strings.Split(line, "\t")
+//		idx := strings.LastIndex(params[1], ".")
+//		v1 := params[1][idx+1:]
+//		v2 := params[1][:idx+1]
+//		v3 := v1[:len(v1)-5]
+//		v4 := fmt.Sprintf("%v%v", v2, v3)
+//		matrix[params[0]] = v4
+//	}
+//	return matrix
+//}
 
 //init sync.Map
 func GetAlphabetMap() *sync.Map {

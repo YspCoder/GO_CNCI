@@ -1,10 +1,3 @@
-/**
- * @Author: lipengfei
- * @Description:
- * @File:  marge
- * @Version: 1.0.0
- * @Date: 2021/08/06 16:39
- */
 package merge
 
 import (
@@ -16,22 +9,21 @@ import (
 	"strings"
 )
 
-func Merge(inputDir, score_path, detil_path string, number int) error {
-
-	score, err := os.Create(score_path)
+func Merge(inputDir, scorePath, detilPath string, number int) error {
+	score, err := os.Create(scorePath)
 	if err != nil {
 		Error("Create GO_CNCI_score Err : [%s]", err.Error())
 		return err
 	}
 
-	detil, err := os.Create(detil_path)
+	detil, err := os.Create(detilPath)
 	if err != nil {
 		Error("Create GO_CNCI_detil Err : [%s]", err.Error())
 		return err
 	}
 	for i := 1; i <= number; i++ {
-		Score_string := fmt.Sprintf("%s/GO_CNCI_file_score%v", inputDir, i)
-		f, err := os.OpenFile(Score_string, os.O_RDONLY, os.ModePerm)
+		scoreString := fmt.Sprintf("%s/GO_CNCI_file_score%v", inputDir, i)
+		f, err := os.OpenFile(scoreString, os.O_RDONLY, os.ModePerm)
 		if err != nil {
 			Error("OpenFile GO_CNCI_file_score Err : [%s]", err.Error())
 			return err
@@ -45,8 +37,8 @@ func Merge(inputDir, score_path, detil_path string, number int) error {
 		_ = f.Close()
 	}
 	for i := 1; i <= number; i++ {
-		Detil_string := fmt.Sprintf("%s/GO_CNCI_file_detil%v", inputDir, i)
-		f, err := os.OpenFile(Detil_string, os.O_RDONLY, os.ModePerm)
+		detilString := fmt.Sprintf("%s/GO_CNCI_file_detil%v", inputDir, i)
+		f, err := os.OpenFile(detilString, os.O_RDONLY, os.ModePerm)
 		if err != nil {
 			Error("OpenFile GO_CNCI_file_detil Err : [%s]", err.Error())
 			return err
@@ -63,27 +55,27 @@ func Merge(inputDir, score_path, detil_path string, number int) error {
 }
 
 func AddSvmLabel(rec []string, FileName string) error {
-	SVM_arr_store := []string{}
-	SVM_FILE_ONE, err := os.Create(FileName)
+	SvmArrScore := make([]string, 0)
+	SvmFileOne, err := os.Create(FileName)
 	if err != nil {
 		Error("Create error![%v]\n", err.Error())
 		return err
 	}
 	for i := 0; i < len(rec); i++ {
-		temp_str := rec[i]
-		temp_arr := strings.Split(temp_str, " ")
-		for j := 0; j < len(temp_arr); j++ {
+		tempStr := rec[i]
+		tempArr := strings.Split(tempStr, " ")
+		for j := 0; j < len(tempArr); j++ {
 			index := j + 1
-			temp_arr[j] = strconv.Itoa(index) + ":" + temp_arr[j]
+			tempArr[j] = strconv.Itoa(index) + ":" + tempArr[j]
 		}
-		str_temp := strings.Join(temp_arr, " ")
-		SVM_arr_store = append(SVM_arr_store, str_temp)
-		_, err = SVM_FILE_ONE.WriteString(str_temp + "\n")
+		strTemp := strings.Join(tempArr, " ")
+		SvmArrScore = append(SvmArrScore, strTemp)
+		_, err = SvmFileOne.WriteString(strTemp + "\n")
 		if err != nil {
 			Error("WriteString error![%v]\n", err.Error())
 			continue
 		}
 	}
-	defer SVM_FILE_ONE.Close()
+	defer SvmFileOne.Close()
 	return nil
 }

@@ -20,33 +20,33 @@ func main() {
 		Info("./GO_CNCI ./CNCI_Parameters ./94d6346_candidate.fa ./test ./libsvm 8")
 		return
 	}
-	CNCI_Parameters := os.Args[1]
+	cnciParameters := os.Args[1]
 	inputFile := os.Args[2]
 	outDir := os.Args[3]
-	libsvm_path := os.Args[4]
+	libsvmPath := os.Args[4]
 	thread, err := strconv.Atoi(os.Args[5])
 	if err != nil {
 		Info("Please enter a positive integer -- thread")
 		return
 	}
-	out_temp := fmt.Sprintf("%s/temp", outDir)
-	if !PathExists(out_temp) {
-		err := os.MkdirAll(out_temp, os.ModePerm)
+	outTemp := fmt.Sprintf("%s/temp", outDir)
+	if !PathExists(outTemp) {
+		err := os.MkdirAll(outTemp, os.ModePerm)
 		if err != nil {
 			Error("Create Temp Err : [%s]", err.Error())
 			return
 		}
 	}
-	hashMatrix := ReadFileMatrix(CNCI_Parameters + "/CNCI_matrix")
-	sequence_Arr := ReadFileArray(inputFile)
-	sLen := len(sequence_Arr) - 1
-	sequence_Arr = sequence_Arr[:sLen]
-	fastArray := TwoLineFasta(sequence_Arr)
-	Label_Array, Fasta_Seq_Array := Tran_checkSeq(fastArray)
+	hashMatrix := ReadFileMatrix(cnciParameters + "/CNCI_matrix")
+	sequenceArr := ReadFileArray(inputFile)
+	sLen := len(sequenceArr) - 1
+	sequenceArr = sequenceArr[:sLen]
+	fastArray := TwoLineFasta(sequenceArr)
+	labelArray, FastqSeqArray := Tran_checkSeq(fastArray)
 
-	TOT_STRING := GetLabelArray(Label_Array, Fasta_Seq_Array)
+	tot := GetLabelArray(labelArray, FastqSeqArray)
 	Info("-------Start splitting file------")
-	SplitFile(TOT_STRING, thread, out_temp)
+	SplitFile(tot, thread, outTemp)
 	Info("--------End of split file-------")
 	Info("--------Start calculation-------")
 	seam := gsema.NewSemaphore(1)
@@ -54,9 +54,9 @@ func main() {
 		seam.Add(1)
 		rk := reckon.New()
 		rk.HashMatrix = hashMatrix
-		rk.TempInput = fmt.Sprintf("%s/GO_CNCI_file%v", out_temp, i)
-		rk.TempScore = fmt.Sprintf("%s/GO_CNCI_file_score%v", out_temp, i)
-		rk.TempDetil = fmt.Sprintf("%s/GO_CNCI_file_detil%v", out_temp, i)
+		rk.TempInput = fmt.Sprintf("%s/GO_CNCI_file%v", outTemp, i)
+		rk.TempScore = fmt.Sprintf("%s/GO_CNCI_file_score%v", outTemp, i)
+		rk.TempDetil = fmt.Sprintf("%s/GO_CNCI_file_detil%v", outTemp, i)
 		rk.Thread = thread
 		go rk.Init(seam)
 	}
@@ -64,20 +64,20 @@ func main() {
 	Info("--------End of calculation-------")
 	outfile := fmt.Sprintf("%s/pro", outDir)
 	Info("---------Start merging files--------")
-	score_path := fmt.Sprintf("%s/GO_CNCI_score", outDir)
-	detil_path := fmt.Sprintf("%s/GO_CNCI_detil", outDir)
-	err = merge.Merge(out_temp, score_path, detil_path, thread)
+	scorePath := fmt.Sprintf("%s/GO_CNCI_score", outDir)
+	detilPath := fmt.Sprintf("%s/GO_CNCI_detil", outDir)
+	err = merge.Merge(outTemp, scorePath, detilPath, thread)
 	if err != nil {
 		Error("Merge err : [%s]", err.Error())
 		return
 	}
-	score_array := ReadFileArray(score_path)
-	scoreSLength := len(score_array) - 1
-	score_array = score_array[:scoreSLength]
-	detil_array := ReadFileArray(detil_path)
-	detilSLength := len(detil_array) - 1
-	detil_array = detil_array[:detilSLength]
-	err = merge.AddSvmLabel(score_array, outfile)
+	scoreArray := ReadFileArray(scorePath)
+	//scoreSLength := len(scoreArray) - 1
+	//scoreArray = scoreArray[:scoreSLength]
+	detilArray := ReadFileArray(detilPath)
+	//detilSLength := len(detilArray) - 1
+	//detilArray = detilArray[:detilSLength]
+	err = merge.AddSvmLabel(scoreArray, outfile)
 	if err != nil {
 		Error("AddSvmLabel err : [%s]", err.Error())
 		return
@@ -87,14 +87,14 @@ func main() {
 	SvmFile := fmt.Sprintf("%s/file", outDir)
 	SvmTmp := fmt.Sprintf("%s/tmp", outDir)
 	Info("-------Start vector calculation------")
-	err = Libsvm(outfile, SvmPutFileName, SvmFile, SvmTmp, libsvm_path, CNCI_Parameters)
+	err = Libsvm(outfile, SvmPutFileName, SvmFile, SvmTmp, libsvmPath, cnciParameters)
 	if err != nil {
 		Error("Libsvm err : [%s]", err.Error())
 		return
 	}
 	Info("----------End of vector calculation--------")
 	Info("Start output file")
-	FirResult := PutResult(detil_array, SvmFile)
+	FirResult := PutResult(detilArray, SvmFile)
 	SvmFinalResult := fmt.Sprintf("%s/GO_CNCI.index", outDir)
 	PrintResult(FirResult, SvmFinalResult)
 	Info("---------End of output file----------")
