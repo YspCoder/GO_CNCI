@@ -23,7 +23,7 @@ thread propose 4-12
 
 ## Example
 ```
- ./GO_CNCI ./CNCI_Parameters ./94d6346_candidate.fa 10 ./test ./libsvm 8
+ ./GO_CNCI ./CNCI_Parameters ./94d6346_candidate.fa ./test ./libsvm 8
 ```
 ## Citation
 ```
