@@ -116,34 +116,23 @@ func GetLabelArray(labelArray, fastaSeqArray []string) []string {
 	return TOT_STRING
 }
 
-func SplitFile(files []string, number int, out string) {
+func SplitFile(files []string, thread int) *sync.Map {
 	file_num := len(files) / 2
-	split_step := file_num / number
+	split_step := file_num / thread
 	split_step = split_step * 2
-	title := fmt.Sprintf("%v/GO_CNCI_file", out)
 	start := 0
 	end := split_step
-	for i := 1; i <= number+1; i++ {
-		if i < number {
-			temp_title := fmt.Sprintf("%v%v", title, i)
-			TEMP_FILE, _ := os.Create(temp_title)
-			for j := range XRangeInt(start, end) {
-				Tmp := files[j]
-				_, _ = TEMP_FILE.WriteString(Tmp + "\n")
-			}
-			defer TEMP_FILE.Close()
-			start += split_step
-			end += split_step
-		} else {
-			temp_title := fmt.Sprintf("%v%v", title, number)
-			TEMP_FILE, _ := os.Create(temp_title)
-			for j := range XRangeInt(start, len(files)) {
-				Tmp := files[j]
-				_, _ = TEMP_FILE.WriteString(Tmp + "\n")
-			}
-			defer TEMP_FILE.Close()
+	in := sync.Map{}
+	for i := 1; i <= thread; i++ {
+		mp := make(map[string]string)
+		for v := range XRangeInt(start, end, 2) {
+			mp[files[v]] = files[v+1]
 		}
+		in.Store(i, mp)
+		start += split_step
+		end += split_step
 	}
+	return &in
 }
 
 func Libsvm(filepath, outSvm, outfile, outTmp, libsvm_path, CNCI_Parameters string) error {
@@ -191,50 +180,46 @@ func PrintResult(result []string, outDetil string) {
 	}
 	Tabel := "TranscriptId" + "\t" + "index" + "\t" + "score" + "\t" + "start" + "\t" + "end" + "\t" + "length" + "\n"
 	_, _ = OutFileResult.WriteString(Tabel)
-	for i := 0; i < len(result); i++ {
-		out_label := result[i]
-		out_label_arr_label := strings.Split(out_label, ";;;;;")
-		out_label_arr := strings.Split(out_label_arr_label[1], " ")
-		T_label := out_label_arr_label[0]
+	for _, v := range result {
+		outLabelArr := strings.Split(v, ";;;;; ")
+		labelArr := strings.Split(outLabelArr[1], " ")
+		T_label := outLabelArr[0]
 		Tabel_label := T_label[1:]
-		property := out_label_arr[1]
-		start_position := out_label_arr[2]
-		stop_position := out_label_arr[3]
-		value := out_label_arr[4]
-		out_value := substring(value)
-		v1, _ := strconv.ParseFloat(out_value, 64)
-		T_length := out_label_arr[5]
-		if v1 == 0 {
-			v1 = v1 + 0.001
+		property := labelArr[0]
+		start_position := labelArr[1]
+		stop_position := labelArr[2]
+		value := labelArr[3]
+		v1, _ := strconv.ParseFloat(substring(value), 32)
+		v2 := float32(v1)
+		tlen := labelArr[4]
+		if v2 == float32(0) {
+			v2 = v2 + 0.001
 		}
 		temp_out_str := ""
 		if property == "noncoding" {
-			v2 := 0.64 * v1
-			v3 := 0.64 * v2
+			v3 := (0.64 * v2) * 0.64
 			if v3 > 0 {
 				if v3 > 1 {
 					v4 := -1 / v3
-					temp_out_str = fmt.Sprintf("%v\t%v\t%.5f\t%v\t%v\t%v\n", Tabel_label, property, v4, start_position, stop_position, T_length)
+					temp_out_str = fmt.Sprintf("%v\t%v\t%.5f\t%v\t%v\t%v\n", Tabel_label, property, v4, start_position, stop_position, tlen)
 				} else {
 					v4 := -1 * v3
-					temp_out_str = fmt.Sprintf("%v\t%v\t%.5f\t%v\t%v\t%v\n", Tabel_label, property, v4, start_position, stop_position, T_length)
-				}
-			}
-		} else {
-			temp_out_str = fmt.Sprintf("%v\t%v\t%.5f\t%v\t%v\t%v\n", Tabel_label, property, v1, start_position, stop_position, T_length)
-		}
-		if property == "coding" {
-			if v1 <= 0 {
-				if v1 <= -1 {
-					v2 := -1 / v1
-					temp_out_str = fmt.Sprintf("%v\t%v\t%.5f\t%v\t%v\t%v\n", Tabel_label, property, v2, start_position, stop_position, T_length)
-				} else {
-					v2 := -1 * v1
-					temp_out_str = fmt.Sprintf("%v\t%v\t%.5f\t%v\t%v\t%v\n", Tabel_label, property, v2, start_position, stop_position, T_length)
+					temp_out_str = fmt.Sprintf("%v\t%v\t%.5f\t%v\t%v\t%v\n", Tabel_label, property, v4, start_position, stop_position, tlen)
 				}
 			} else {
-				temp_out_str = fmt.Sprintf("%v\t%v\t%.5f\t%v\t%v\t%v\n", Tabel_label, property, v1, start_position, stop_position, T_length)
-
+				temp_out_str = fmt.Sprintf("%v\t%v\t%.5f\t%v\t%v\t%v\n", Tabel_label, property, v3, start_position, stop_position, tlen)
+			}
+		} else if property == "coding" {
+			if v2 <= float32(0) {
+				if v2 <= -1 {
+					v3 := -1 / v2
+					temp_out_str = fmt.Sprintf("%v\t%v\t%.5f\t%v\t%v\t%v\n", Tabel_label, property, v3, start_position, stop_position, tlen)
+				} else {
+					v3 := -1 * v2
+					temp_out_str = fmt.Sprintf("%v\t%v\t%.5f\t%v\t%v\t%v\n", Tabel_label, property, v3, start_position, stop_position, tlen)
+				}
+			} else {
+				temp_out_str = fmt.Sprintf("%v\t%v\t%.5f\t%v\t%v\t%v\n", Tabel_label, property, v2, start_position, stop_position, tlen)
 			}
 		}
 		_, _ = OutFileResult.WriteString(temp_out_str)

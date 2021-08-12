@@ -46,43 +46,28 @@ func main() {
 
 	tot := GetLabelArray(labelArray, FastqSeqArray)
 	Info("-------Start splitting file------")
-	SplitFile(tot, thread, outTemp)
+	in := SplitFile(tot, thread)
 	Info("--------End of split file-------")
 	Info("--------Start calculation-------")
-	seam := gsema.NewSemaphore(1)
+	seam := gsema.NewSemaphore(thread)
 	for i := 1; i <= thread; i++ {
 		seam.Add(1)
 		rk := reckon.New()
 		rk.HashMatrix = hashMatrix
-		rk.TempInput = fmt.Sprintf("%s/GO_CNCI_file%v", outTemp, i)
-		rk.TempScore = fmt.Sprintf("%s/GO_CNCI_file_score%v", outTemp, i)
-		rk.TempDetil = fmt.Sprintf("%s/GO_CNCI_file_detil%v", outTemp, i)
+		rk.FileInput, _ = in.Load(i)
 		rk.Thread = thread
 		go rk.Init(seam)
 	}
 	seam.Wait()
 	Info("--------End of calculation-------")
 	outfile := fmt.Sprintf("%s/pro", outDir)
-	Info("---------Start merging files--------")
-	scorePath := fmt.Sprintf("%s/GO_CNCI_score", outDir)
-	detilPath := fmt.Sprintf("%s/GO_CNCI_detil", outDir)
-	err = merge.Merge(outTemp, scorePath, detilPath, thread)
-	if err != nil {
-		Error("Merge err : [%s]", err.Error())
-		return
-	}
-	scoreArray := ReadFileArray(scorePath)
-	//scoreSLength := len(scoreArray) - 1
-	//scoreArray = scoreArray[:scoreSLength]
-	detilArray := ReadFileArray(detilPath)
-	//detilSLength := len(detilArray) - 1
-	//detilArray = detilArray[:detilSLength]
-	err = merge.AddSvmLabel(scoreArray, outfile)
+	Info("---------Start merging--------")
+	err = merge.AddSvmLabel(reckon.OS_PROPERTY, outfile)
 	if err != nil {
 		Error("AddSvmLabel err : [%s]", err.Error())
 		return
 	}
-	Info("---------End of merge file-------")
+	Info("---------End of merge-------")
 	SvmPutFileName := fmt.Sprintf("%s/svm", outDir)
 	SvmFile := fmt.Sprintf("%s/file", outDir)
 	SvmTmp := fmt.Sprintf("%s/tmp", outDir)
@@ -94,7 +79,7 @@ func main() {
 	}
 	Info("----------End of vector calculation--------")
 	Info("Start output file")
-	FirResult := PutResult(detilArray, SvmFile)
+	FirResult := PutResult(reckon.OS_DETIL, SvmFile)
 	SvmFinalResult := fmt.Sprintf("%s/GO_CNCI.index", outDir)
 	PrintResult(FirResult, SvmFinalResult)
 	Info("---------End of output file----------")
