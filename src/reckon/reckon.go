@@ -35,7 +35,7 @@ func New() *Reckon {
 	}
 }
 
-func (this *Reckon) Init(wg *gsema.Semaphore) {
+func (this *Reckon) Init(wg *sync.WaitGroup) {
 	defer wg.Done()
 
 	var sm = gsema.NewSemaphore(this.Thread)
@@ -64,18 +64,21 @@ func compare(sa *gsema.Semaphore, Seq, Label string, HashMatrix map[string]strin
 	}
 	wg.Wait()
 	rmv, _ := OS_MAX_VALUE.Load(Label)
-	rv := rmv.(*sync.Map)
+	rv := rmv.([]map[float64]string)
 	omx, _ := OS_MAX.Load(Label)
 	mx := omx.([]float64)
 	rMaxValue := mx[:]
 	sort.Float64s(rMaxValue)
 	rMaxValue = ReverseFloats64(rMaxValue)
 	M := rMaxValue[0]
-	if M == 0 {
-		return
+	tmpStr := ""
+	for _, v := range rv {
+		tmpStr = v[M]
+		if tmpStr != "" {
+			break
+		}
 	}
-	v, _ := rv.Load(M)
-	o_tmp_arr := strings.Split(v.(string), " ")
+	o_tmp_arr := strings.Split(tmpStr, " ")
 	var o_arr = make([]string, 0)
 	o_arr = o_tmp_arr[:len(o_tmp_arr)-1]
 	SequenceLen := len(o_arr) - 1
@@ -111,40 +114,43 @@ func compare(sa *gsema.Semaphore, Seq, Label string, HashMatrix map[string]strin
 	}
 	score_distance = score_distance / 5
 	op, _ := OS_POS.Load(Label)
-	p := op.(*sync.Map)
-	out_pos, _ := p.Load(M)
-	ols, _ := OS_LENGTH_STORE.Load(Label)
-	ls := ols.(*sync.Map)
-	mlength, _ := ls.Load(M)
-	if mlength == nil {
-		mlength = 0
+	p := op.([]map[float64]string)
+	out_pos := ""
+	for _, v := range p {
+		out_pos = v[M]
+		if out_pos != "" {
+			break
+		}
 	}
-	var length_total_score float64
-	ls.Range(func(key, value interface{}) bool {
-		v := value.(int)
-		length_total_score = length_total_score + float64(v)
-		return true
-	})
-	length_precent := float64(mlength.(int)) / length_total_score
+	ols, _ := OS_LENGTH_STORE.Load(Label)
+	ls := ols.([]map[float64]int)
+	mlength := 0
+	for _, v := range ls {
+		mlength = v[M]
+		if mlength != 0 {
+			break
+		}
+	}
+	length_total_score := float64(0)
+	for _, v := range ls {
+		for _, t := range v {
+			length_total_score = length_total_score + float64(t)
+		}
+	}
+	length_precent := float64(mlength) / length_total_score
 	codingArray := make([]string, 0)
-
 	for _, v := range o_arr {
 		byteMatchResult, _ := regexp.Match(`[atcg{3}]`, []byte(v))
 		if byteMatchResult && v != "taa" && v != "tag" && v != "tga" {
-			if v3, ok := codonArr.Load(v); ok {
-				v1 := v3.(int)
-				v2 := v1 + 1
+			if v1, ok := codonArr.Load(v); ok {
+				v2 := v1.(int)
+				v3 := v2 + 1
 				codonArr.Delete(v)
-				codonArr.Store(v, v2)
+				codonArr.Store(v, v3)
 			}
 		}
 	}
-
 	C_num1 := 0
-	//for _, v := range codingArray {
-	//	v1, _ := strconv.Atoi(v)
-	//	C_num1 = C_num1 + v1
-	//}
 	codonArr.Range(func(key, value interface{}) bool {
 		v1 := value.(int)
 		C_num1 = C_num1 + v1
@@ -159,17 +165,11 @@ func compare(sa *gsema.Semaphore, Seq, Label string, HashMatrix map[string]strin
 		codingArray = append(codingArray, fmt.Sprintf("%v", v2))
 		return true
 	})
-	//for k, v := range codingArray {
-	//	v1, _ := strconv.Atoi(v)
-	//	v2 := v1 / C_num1
-	//	codingArray[k] = fmt.Sprintf("%v", v2)
-	//}
 	Array_Str := strings.Join(codingArray, " ")
 	PROPERTY_STR := fmt.Sprintf("%v %v %v %v %v %v %v", Label, M, mlength, mScore, length_precent, score_distance, Array_Str)
 	OS_PROPERTY = append(OS_PROPERTY, PROPERTY_STR)
 	DETIL_STR := fmt.Sprintf("%v;;;;; %v %v %v", Label, out_pos, mScore, DetilLen)
 	OS_DETIL = append(OS_DETIL, DETIL_STR)
-
 }
 
 func multilayerComparison(wg *sync.WaitGroup, o, slen int, idx string, sequenceProcessArr, sequenceProcessArrR []string, HashMatrix map[string]string) {
@@ -231,21 +231,25 @@ func multilayerComparison(wg *sync.WaitGroup, o, slen int, idx string, sequenceP
 		Start = Start * 3
 		End = End * 3
 		Position := fmt.Sprintf("%v %v", Start, End)
-		p := &sync.Map{}
+		p := make([]map[float64]string, 0)
+		p1 := make(map[float64]string, 0)
 		op, _ := OS_POS.Load(idx)
 		if op != nil {
-			p = op.(*sync.Map)
+			p = op.([]map[float64]string)
 		}
-		p.Store(Max, Position)
+		p1[Max] = Position
+		p = append(p, p1)
 		OS_POS.Delete(idx)
 		OS_POS.Store(idx, p)
 
-		mv := &sync.Map{}
+		mv := make([]map[float64]string, 0)
+		mv1 := make(map[float64]string, 0)
 		omv, _ := OS_MAX_VALUE.Load(idx)
 		if omv != nil {
-			mv = omv.(*sync.Map)
+			mv = omv.([]map[float64]string)
 		}
-		mv.Store(Max, outStr)
+		mv1[Max] = outStr
+		mv = append(mv, mv1)
 		OS_MAX_VALUE.Delete(idx)
 		OS_MAX_VALUE.Store(idx, mv)
 
@@ -261,12 +265,14 @@ func multilayerComparison(wg *sync.WaitGroup, o, slen int, idx string, sequenceP
 		OutParray := strings.Split(outStr, " ")
 		max_length := len(OutParray) - 1
 
-		ls := &sync.Map{}
+		ls := make([]map[float64]int, 0)
+		ls1 := make(map[float64]int, 0)
 		ols, _ := OS_LENGTH_STORE.Load(idx)
 		if ols != nil {
-			ls = ols.(*sync.Map)
+			ls = ols.([]map[float64]int)
 		}
-		ls.Store(Max, max_length)
+		ls1[Max] = max_length
+		ls = append(ls, ls1)
 		OS_LENGTH_STORE.Delete(idx)
 		OS_LENGTH_STORE.Store(idx, ls)
 
@@ -283,21 +289,25 @@ func multilayerComparison(wg *sync.WaitGroup, o, slen int, idx string, sequenceP
 			}
 		}
 		outStr := strings.Join(TempArray, " ")
-		p := &sync.Map{}
+		p := make([]map[float64]string, 0)
+		p1 := make(map[float64]string, 0)
 		op, _ := OS_POS.Load(idx)
 		if op != nil {
-			p = op.(*sync.Map)
+			p = op.([]map[float64]string)
 		}
-		p.Store(num, "Full Length")
+		p1[num] = "Full Length"
+		p = append(p, p1)
 		OS_POS.Delete(idx)
 		OS_POS.Store(idx, p)
 
-		mv := &sync.Map{}
+		mv := make([]map[float64]string, 0)
+		mv1 := make(map[float64]string, 0)
 		omv, _ := OS_MAX_VALUE.Load(idx)
 		if omv != nil {
-			mv = omv.(*sync.Map)
+			mv = omv.([]map[float64]string)
 		}
-		mv.Store(num, outStr)
+		mv1[num] = outStr
+		mv = append(mv, mv1)
 		OS_MAX_VALUE.Delete(idx)
 		OS_MAX_VALUE.Store(idx, mv)
 
@@ -310,14 +320,17 @@ func multilayerComparison(wg *sync.WaitGroup, o, slen int, idx string, sequenceP
 		OS_MAX.Delete(idx)
 		OS_MAX.Store(idx, mx)
 
-		ls := &sync.Map{}
+		ls := make([]map[float64]int, 0)
+		ls1 := make(map[float64]int, 0)
 		ols, _ := OS_LENGTH_STORE.Load(idx)
 		if ols != nil {
-			ls = ols.(*sync.Map)
+			ls = ols.([]map[float64]int)
 		}
-		ls.Store(num, seqLength)
+		ls1[num] = seqLength
+		ls = append(ls, ls1)
 		OS_LENGTH_STORE.Delete(idx)
 		OS_LENGTH_STORE.Store(idx, ls)
+
 	}
 }
 

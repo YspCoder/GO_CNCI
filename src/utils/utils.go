@@ -206,7 +206,7 @@ func PrintResult(result []string, outDetil string) {
 				temp_out_str = fmt.Sprintf("%v\t%v\t%.5f\t%v\t%v\t%v\n", Tabel_label, property, v3, start_position, stop_position, tlen)
 			}
 		} else if property == "coding" {
-			if v1 <= 0 {
+			if v1 <= 0.0 {
 				if v1 <= -1 {
 					v3 := -1 / v1
 					temp_out_str = fmt.Sprintf("%v\t%v\t%.5f\t%v\t%v\t%v\n", Tabel_label, property, v3, start_position, stop_position, tlen)
