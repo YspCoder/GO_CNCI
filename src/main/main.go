@@ -31,9 +31,10 @@ func main() {
 	}
 	hashMatrix := ReadFileMatrix(cnciParameters + "/CNCI_matrix")
 	sequenceArr := ReadFileArray(inputFile)
-	sLen := len(sequenceArr) - 1
-	sequenceArr = sequenceArr[:sLen]
-
+	sLen := len(sequenceArr)
+	if sequenceArr[sLen-1] == "" {
+		sequenceArr = sequenceArr[:sLen-1]
+	}
 	fastArray := TwoLineFasta(sequenceArr)
 	if len(fastArray) < thread {
 		Info("Please set a smaller number of threads")

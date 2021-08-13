@@ -67,16 +67,8 @@ func ReadFileArray(path string) []string {
 	defer f.Close()
 	scanner := bufio.NewScanner(f)
 	fileArray := make([]string, 0)
-	if strings.Contains(path, "GO_CNCI_file_score6") {
-		Warn("*******************************************************")
-		for scanner.Scan() {
-			Warn(scanner.Text())
-			fileArray = append(fileArray, scanner.Text())
-		}
-	} else {
-		for scanner.Scan() {
-			fileArray = append(fileArray, scanner.Text())
-		}
+	for scanner.Scan() {
+		fileArray = append(fileArray, scanner.Text())
 	}
 	Info("Read file success filename : [%s]", path)
 	return fileArray
@@ -194,7 +186,7 @@ func PrintResult(result []string, outDetil string) {
 		start_position := labelArr[1]
 		stop_position := labelArr[2]
 		value := labelArr[3]
-		v1, _ := strconv.ParseFloat(substring(value), 32)
+		v1, _ := strconv.ParseFloat(substring(value), 64)
 		tlen := labelArr[4]
 		if v1 == 0 {
 			v1 = v1 + 0.001
@@ -205,25 +197,25 @@ func PrintResult(result []string, outDetil string) {
 			if v3 > 0 {
 				if v3 > 1 {
 					v4 := -1 / v3
-					temp_out_str = fmt.Sprintf("%v\t%v\t%.8f\t%v\t%v\t%v\n", Tabel_label, property, v4, start_position, stop_position, tlen)
+					temp_out_str = fmt.Sprintf("%v\t%v\t%.5f\t%v\t%v\t%v\n", Tabel_label, property, v4, start_position, stop_position, tlen)
 				} else {
 					v4 := -1 * v3
-					temp_out_str = fmt.Sprintf("%v\t%v\t%.8f\t%v\t%v\t%v\n", Tabel_label, property, v4, start_position, stop_position, tlen)
+					temp_out_str = fmt.Sprintf("%v\t%v\t%.5f\t%v\t%v\t%v\n", Tabel_label, property, v4, start_position, stop_position, tlen)
 				}
 			} else {
-				temp_out_str = fmt.Sprintf("%v\t%v\t%.8f\t%v\t%v\t%v\n", Tabel_label, property, v3, start_position, stop_position, tlen)
+				temp_out_str = fmt.Sprintf("%v\t%v\t%.5f\t%v\t%v\t%v\n", Tabel_label, property, v3, start_position, stop_position, tlen)
 			}
 		} else if property == "coding" {
 			if v1 <= 0 {
 				if v1 <= -1 {
 					v3 := -1 / v1
-					temp_out_str = fmt.Sprintf("%v\t%v\t%.8f\t%v\t%v\t%v\n", Tabel_label, property, v3, start_position, stop_position, tlen)
+					temp_out_str = fmt.Sprintf("%v\t%v\t%.5f\t%v\t%v\t%v\n", Tabel_label, property, v3, start_position, stop_position, tlen)
 				} else {
 					v3 := -1 * v1
-					temp_out_str = fmt.Sprintf("%v\t%v\t%.8f\t%v\t%v\t%v\n", Tabel_label, property, v3, start_position, stop_position, tlen)
+					temp_out_str = fmt.Sprintf("%v\t%v\t%.5f\t%v\t%v\t%v\n", Tabel_label, property, v3, start_position, stop_position, tlen)
 				}
 			} else {
-				temp_out_str = fmt.Sprintf("%v\t%v\t%v\t%.8f\t%v\t%v\n", Tabel_label, property, v1, start_position, stop_position, tlen)
+				temp_out_str = fmt.Sprintf("%v\t%v\t%.5f\t%v\t%v\t%v\n", Tabel_label, property, v1, start_position, stop_position, tlen)
 			}
 		}
 		_, _ = OutFileResult.WriteString(temp_out_str)
@@ -264,7 +256,7 @@ func Reverse(params []string) []string {
 	return params
 }
 
-func ReverseFloats32(params []float32) []float32 {
+func ReverseFloats64(params []float64) []float64 {
 	for i, j := 0, len(params)-1; i < j; i, j = i+1, j-1 {
 		params[i], params[j] = params[j], params[i]
 	}
@@ -295,67 +287,6 @@ func InitCodonSeq(num, length, step int, Arr []string) string {
 	return TempStrPar
 }
 
-func Tran_checkSeq(input_arr []string) ([]string, []string) {
-	label_Arr := make([]string, 0)
-	FastA_seq_Arr := make([]string, 0)
-	for n := 0; n < len(input_arr); n++ {
-		if n == 0 || n%2 == 0 {
-			label_Arr = append(label_Arr, input_arr[n])
-		} else {
-			FastA_seq_Arr = append(FastA_seq_Arr, input_arr[n])
-		}
-	}
-	num := 0
-	for i := 0; i < len(label_Arr); i++ {
-		Seq := FastA_seq_Arr[num]
-		tran_fir_seq := strings.ToLower(Seq)
-		tran_sec_seq_one := strings.ReplaceAll(tran_fir_seq, "u", "t")
-		tran_sec_seq := strings.ReplaceAll(tran_sec_seq_one, "\r", "")
-		if strings.Contains(tran_sec_seq, "n") {
-			label_Arr = append(label_Arr[:num], label_Arr[num+1:]...)
-			FastA_seq_Arr = append(FastA_seq_Arr[:num], FastA_seq_Arr[num+1:]...)
-			continue
-		}
-		if strings.Contains(tran_sec_seq, "n") {
-			label_Arr = append(label_Arr[:num], label_Arr[num+1:]...)
-			FastA_seq_Arr = append(FastA_seq_Arr[:num], FastA_seq_Arr[num+1:]...)
-			continue
-		}
-		if strings.Contains(tran_sec_seq, "w") {
-			label_Arr = append(label_Arr[:num], label_Arr[num+1:]...)
-			FastA_seq_Arr = append(FastA_seq_Arr[:num], FastA_seq_Arr[num+1:]...)
-			continue
-		}
-		if strings.Contains(tran_sec_seq, "d") {
-			label_Arr = append(label_Arr[:num], label_Arr[num+1:]...)
-			FastA_seq_Arr = append(FastA_seq_Arr[:num], FastA_seq_Arr[num+1:]...)
-			continue
-		}
-		if strings.Contains(tran_sec_seq, "r") {
-			label_Arr = append(label_Arr[:num], label_Arr[num+1:]...)
-			FastA_seq_Arr = append(FastA_seq_Arr[:num], FastA_seq_Arr[num+1:]...)
-			continue
-		}
-		if strings.Contains(tran_sec_seq, "s") {
-			label_Arr = append(label_Arr[:num], label_Arr[num+1:]...)
-			FastA_seq_Arr = append(FastA_seq_Arr[:num], FastA_seq_Arr[num+1:]...)
-			continue
-		}
-		if strings.Contains(tran_sec_seq, "y") {
-			label_Arr = append(label_Arr[:num], label_Arr[num+1:]...)
-			FastA_seq_Arr = append(FastA_seq_Arr[:num], FastA_seq_Arr[num+1:]...)
-			continue
-		}
-		if strings.Contains(tran_sec_seq, "m") {
-			label_Arr = append(label_Arr[:num], label_Arr[num+1:]...)
-			FastA_seq_Arr = append(FastA_seq_Arr[:num], FastA_seq_Arr[num+1:]...)
-			continue
-		}
-		num = num + 1
-	}
-	return label_Arr, FastA_seq_Arr
-}
-
 func ReadFileMatrix(path string) map[string]string {
 	matrix := make(map[string]string, 0)
 	f, err := os.Open(path)
@@ -371,27 +302,6 @@ func ReadFileMatrix(path string) map[string]string {
 	}
 	return matrix
 }
-
-//func ReadFileMatrix(path string) map[string]string {
-//	matrix := make(map[string]string, 0)
-//	f, err := os.Open(path)
-//	if err != nil {
-//		Error("Read file fail : %s", err.Error())
-//	}
-//	defer f.Close()
-//	scanner := bufio.NewScanner(f)
-//	for scanner.Scan() {
-//		line := scanner.Text()
-//		params := strings.Split(line, "\t")
-//		idx := strings.LastIndex(params[1], ".")
-//		v1 := params[1][idx+1:]
-//		v2 := params[1][:idx+1]
-//		v3 := v1[:len(v1)-5]
-//		v4 := fmt.Sprintf("%v%v", v2, v3)
-//		matrix[params[0]] = v4
-//	}
-//	return matrix
-//}
 
 //init sync.Map
 func GetAlphabetMap() *sync.Map {
