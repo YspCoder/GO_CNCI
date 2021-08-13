@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -126,7 +127,10 @@ func SplitFile(files []string, thread int) *sync.Map {
 	for i := 1; i <= thread; i++ {
 		mp := make(map[string]string)
 		for v := range XRangeInt(start, end, 2) {
-			mp[files[v]] = files[v+1]
+			key := strings.ReplaceAll(files[v], "\r", "")
+			v1 := strings.ReplaceAll(files[v+1], "\r", "")
+			value := strings.ReplaceAll(v1, "u", "t")
+			mp[key] = value
 		}
 		in.Store(i, mp)
 		start += split_step
@@ -154,8 +158,9 @@ func PutResult(detil_array []string, filepath string) []string {
 	classify_index := 0
 	index_coding := "1"
 	Temp_Result_Arr := make([]string, 0)
-	for i := 0; i < len(detil_array); i++ {
-		temp_label_arr_label := strings.Split(detil_array[i], ";;;;;")
+	sort.Strings(detil_array)
+	for _, v := range detil_array {
+		temp_label_arr_label := strings.Split(v, ";;;;;")
 		Label := temp_label_arr_label[0]
 		temp_label_arr := strings.Split(temp_label_arr_label[1], " ")
 		sub_temp_label_arr := temp_label_arr[1:]
@@ -190,36 +195,35 @@ func PrintResult(result []string, outDetil string) {
 		stop_position := labelArr[2]
 		value := labelArr[3]
 		v1, _ := strconv.ParseFloat(substring(value), 32)
-		v2 := float32(v1)
 		tlen := labelArr[4]
-		if v2 == float32(0) {
-			v2 = v2 + 0.001
+		if v1 == 0 {
+			v1 = v1 + 0.001
 		}
 		temp_out_str := ""
 		if property == "noncoding" {
-			v3 := (0.64 * v2) * 0.64
+			v3 := (0.64 * v1) * 0.64
 			if v3 > 0 {
 				if v3 > 1 {
 					v4 := -1 / v3
-					temp_out_str = fmt.Sprintf("%v\t%v\t%.5f\t%v\t%v\t%v\n", Tabel_label, property, v4, start_position, stop_position, tlen)
+					temp_out_str = fmt.Sprintf("%v\t%v\t%.8f\t%v\t%v\t%v\n", Tabel_label, property, v4, start_position, stop_position, tlen)
 				} else {
 					v4 := -1 * v3
-					temp_out_str = fmt.Sprintf("%v\t%v\t%.5f\t%v\t%v\t%v\n", Tabel_label, property, v4, start_position, stop_position, tlen)
+					temp_out_str = fmt.Sprintf("%v\t%v\t%.8f\t%v\t%v\t%v\n", Tabel_label, property, v4, start_position, stop_position, tlen)
 				}
 			} else {
-				temp_out_str = fmt.Sprintf("%v\t%v\t%.5f\t%v\t%v\t%v\n", Tabel_label, property, v3, start_position, stop_position, tlen)
+				temp_out_str = fmt.Sprintf("%v\t%v\t%.8f\t%v\t%v\t%v\n", Tabel_label, property, v3, start_position, stop_position, tlen)
 			}
 		} else if property == "coding" {
-			if v2 <= float32(0) {
-				if v2 <= -1 {
-					v3 := -1 / v2
-					temp_out_str = fmt.Sprintf("%v\t%v\t%.5f\t%v\t%v\t%v\n", Tabel_label, property, v3, start_position, stop_position, tlen)
+			if v1 <= 0 {
+				if v1 <= -1 {
+					v3 := -1 / v1
+					temp_out_str = fmt.Sprintf("%v\t%v\t%.8f\t%v\t%v\t%v\n", Tabel_label, property, v3, start_position, stop_position, tlen)
 				} else {
-					v3 := -1 * v2
-					temp_out_str = fmt.Sprintf("%v\t%v\t%.5f\t%v\t%v\t%v\n", Tabel_label, property, v3, start_position, stop_position, tlen)
+					v3 := -1 * v1
+					temp_out_str = fmt.Sprintf("%v\t%v\t%.8f\t%v\t%v\t%v\n", Tabel_label, property, v3, start_position, stop_position, tlen)
 				}
 			} else {
-				temp_out_str = fmt.Sprintf("%v\t%v\t%.5f\t%v\t%v\t%v\n", Tabel_label, property, v2, start_position, stop_position, tlen)
+				temp_out_str = fmt.Sprintf("%v\t%v\t%v\t%.8f\t%v\t%v\n", Tabel_label, property, v1, start_position, stop_position, tlen)
 			}
 		}
 		_, _ = OutFileResult.WriteString(temp_out_str)
@@ -260,12 +264,6 @@ func Reverse(params []string) []string {
 	return params
 }
 
-func ReverseFloats(params []float64) []float64 {
-	for i, j := 0, len(params)-1; i < j; i, j = i+1, j-1 {
-		params[i], params[j] = params[j], params[i]
-	}
-	return params
-}
 func ReverseFloats32(params []float32) []float32 {
 	for i, j := 0, len(params)-1; i < j; i, j = i+1, j-1 {
 		params[i], params[j] = params[j], params[i]
@@ -274,7 +272,7 @@ func ReverseFloats32(params []float32) []float32 {
 }
 
 func StringToArray(params string) []string {
-	paramsCharAr := []byte(params) //把字符串转为字节数组，每一位存储的是该字符对应的ASCII码
+	paramsCharAr := []byte(params)
 	var paramArray = make([]string, 0)
 	for i := 0; i < len(paramsCharAr); i++ {
 		paramArray = append(paramArray, string(paramsCharAr[i]))
@@ -295,17 +293,6 @@ func InitCodonSeq(num, length, step int, Arr []string) string {
 		TempStrPar = TempStrPar + Temp + " "
 	}
 	return TempStrPar
-}
-
-func PathExists(path string) bool {
-	_, err := os.Stat(path)
-	if err == nil {
-		return true
-	}
-	if os.IsNotExist(err) {
-		return false
-	}
-	return false
 }
 
 func Tran_checkSeq(input_arr []string) ([]string, []string) {

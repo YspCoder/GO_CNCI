@@ -12,7 +12,7 @@ import (
 )
 
 var (
-	OS_MAX_VALUE    = sync.Map{} // map[i]map[d][]float32
+	OS_MAX_VALUE    = sync.Map{}
 	OS_MAX          = sync.Map{}
 	OS_LENGTH_STORE = sync.Map{}
 	OS_POS          = sync.Map{}
@@ -47,84 +47,75 @@ func (this *Reckon) Init(wg *gsema.Semaphore) {
 	var sm = gsema.NewSemaphore(this.Thread)
 	HashMatrix := this.HashMatrix
 	sequenceArr := this.FileInput.(map[string]string)
-	i := 1
 	for k, v := range sequenceArr {
 		sm.Add(1)
-		go compare(sm, i, v, k, HashMatrix)
-		i++
+		go compare(sm, v, k, HashMatrix)
 	}
 	sm.Wait()
 }
 
-func compare(sa *gsema.Semaphore, idx int, Seq, Label string, HashMatrix map[string]string) {
+func compare(sa *gsema.Semaphore, Seq, Label string, HashMatrix map[string]string) {
 	defer sa.Done()
 	DetilLen := len(Seq)
 	tran_fir_seq := strings.ToLower(Seq)
-	tran_sec_seq := strings.ReplaceAll(tran_fir_seq, "u", "t")
-	sequenceProcessArr := StringToArray(tran_sec_seq)
+	sequenceProcessArr := StringToArray(tran_fir_seq)
 	sequenceProcessArrR := Reverse(sequenceProcessArr)
 	slen := len(sequenceProcessArr) - 1
 	var wg sync.WaitGroup
 	for o := 0; o < 6; o++ {
 		wg.Add(1)
-		go multilayerComparison(&wg, o, idx, slen, sequenceProcessArr, sequenceProcessArrR, HashMatrix)
+		go multilayerComparison(&wg, o, slen, Label, sequenceProcessArr, sequenceProcessArrR, HashMatrix)
 	}
 	wg.Wait()
-	rmv, _ := OS_MAX_VALUE.Load(idx)
-	rv := rmv.([]float32)
-	rMaxValue := rv[:]
+	rmv, _ := OS_MAX_VALUE.Load(Label)
+	rv := rmv.(map[float32]string)
+	omx, _ := OS_MAX.Load(Label)
+	mx := omx.([]float32)
+	rMaxValue := mx[:]
 	sort.Sort(Float32List(rMaxValue))
 	rMaxValue = ReverseFloats32(rMaxValue)
 	M := rMaxValue[0]
-	orf_index := 0
-	for k, v := range rv {
-		if v == M {
-			orf_index = k
-		}
-	}
-	omx, _ := OS_MAX.Load(idx)
-	mx := omx.([]string)
-	o_tmp_arr := strings.Split(mx[orf_index], " ")
+	o_tmp_arr := strings.Split(rv[M], " ")
 	var o_arr = make([]string, 0)
 	o_arr = o_tmp_arr[:len(o_tmp_arr)-1]
 	SequenceLen := len(o_arr) - 1
-	mScore := float32(0)
+	var mScore float32
 	for j := 0; j < SequenceLen; j++ {
-		temp_trip := o_arr[j] + o_arr[j+1]
-		byteMatchResult, _ := regexp.Match(`[atcg]{6}`, []byte(temp_trip))
+		v := o_arr[j] + o_arr[j+1]
+		byteMatchResult, _ := regexp.Match(`[atcg]{6}`, []byte(v))
 		if byteMatchResult {
-			if v9, ok := HashMatrix[temp_trip]; ok {
-				v1, _ := strconv.ParseFloat(v9, 64)
+			if v9, ok := HashMatrix[v]; ok {
+				v1, _ := strconv.ParseFloat(v9, 32)
 				mScore = mScore + float32(v1)
 			}
 		}
 	}
 	SequenceLen = SequenceLen + 2
 	mScore = mScore / float32(SequenceLen)
-	mlcds := strings.Join(o_arr, " ")
+	mlcds := strings.Join(o_arr, "")
 	mlcdsSequence := StringToArray(mlcds)
 	mlcdsSequenceR := mlcdsSequence
 	mlcdsSequenceR = Reverse(mlcdsSequenceR)
 	mlen := len(mlcdsSequence) - 1
-	for o := 1; o < 6; o++ {
+	for h := 1; h < 6; h++ {
 		wg.Add(1)
-		go multilayerComparisonTwo(&wg, o, idx, mlen, mlcdsSequence, mlcdsSequenceR, HashMatrix)
+		go multilayerComparisonTwo(&wg, h, mlen, Label, mlcdsSequence, mlcdsSequenceR, HashMatrix)
 	}
 	wg.Wait()
-	score_distance := float32(0)
-	ooc, _ := OS_OTHER_CDS.Load(idx)
+	var score_distance float32
+	ooc, _ := OS_OTHER_CDS.Load(Label)
 	oc := ooc.([]float32)
 
 	for _, v := range oc {
 		score_distance += mScore - v
 	}
 	score_distance = score_distance / 5
-	op, _ := OS_POS.Load(idx)
-	p := op.([]string)
-	out_pos := p[orf_index]
-	ols, _ := OS_LENGTH_STORE.Load(idx)
-	ls := ols.([]int)
-	mlength := ls[orf_index]
+	op, _ := OS_POS.Load(Label)
+	p := op.(map[float32]string)
+	out_pos := p[M]
+	ols, _ := OS_LENGTH_STORE.Load(Label)
+	ls := ols.(map[float32]int)
+	mlength := ls[M]
 	length_total_score := float32(0)
 	for _, v := range ls {
 		length_total_score = length_total_score + float32(v)
@@ -162,13 +153,13 @@ func compare(sa *gsema.Semaphore, idx int, Seq, Label string, HashMatrix map[str
 		codingArray[k] = fmt.Sprintf("%v", v2)
 	}
 	Array_Str := strings.Join(codingArray, " ")
-	PROPERTY_STR := fmt.Sprintf("%v %v %v %v %v %v", M, mlength, mScore, length_precent, score_distance, Array_Str)
+	PROPERTY_STR := fmt.Sprintf("%v %v %v %v %v %v %v", Label, M, mlength, mScore, length_precent, score_distance, Array_Str)
 	OS_PROPERTY = append(OS_PROPERTY, PROPERTY_STR)
 	DETIL_STR := fmt.Sprintf("%v;;;;; %v %v %v", Label, out_pos, mScore, DetilLen)
 	OS_DETIL = append(OS_DETIL, DETIL_STR)
 }
 
-func multilayerComparison(wg *sync.WaitGroup, o, idx, slen int, sequenceProcessArr, sequenceProcessArrR []string, HashMatrix map[string]string) {
+func multilayerComparison(wg *sync.WaitGroup, o, slen int, idx string, sequenceProcessArr, sequenceProcessArrR []string, HashMatrix map[string]string) {
 	defer wg.Done()
 	CodonScore := make([]float32, 0)
 	TempStr := ""
@@ -185,7 +176,7 @@ func multilayerComparison(wg *sync.WaitGroup, o, idx, slen int, sequenceProcessA
 	WinLen := seqLength - WindowStep
 	if seqLength > WindowStep {
 		for EachCodon := 0; EachCodon < WinLen; EachCodon++ {
-			num := float32(0)
+			var num float32
 			SingleArray := make([]string, 0)
 			for t := EachCodon; t < WindowStep+EachCodon; t++ {
 				SingleArray = append(SingleArray, TempArray[t])
@@ -194,8 +185,10 @@ func multilayerComparison(wg *sync.WaitGroup, o, idx, slen int, sequenceProcessA
 				v := SingleArray[w] + SingleArray[w+1]
 				byteMatchResult, _ := regexp.Match(`[atcg]{6}`, []byte(v))
 				if byteMatchResult {
-					v1, _ := strconv.ParseFloat(HashMatrix[v], 64)
-					num = num + float32(v1)
+					if v9, ok := HashMatrix[v]; ok {
+						v1, _ := strconv.ParseFloat(v9, 32)
+						num = num + float32(v1)
+					}
 				}
 			}
 			num = num / float32(WindowStep)
@@ -203,10 +196,10 @@ func multilayerComparison(wg *sync.WaitGroup, o, idx, slen int, sequenceProcessA
 		}
 		Start := 0
 		End := 0
-		Max := float32(0)
+		var Max float32
 
 		for r := 0; r < len(CodonScore); r++ {
-			sum := float32(0)
+			var sum float32
 			CodonLength := len(CodonScore)
 			for e := r; e < CodonLength; e++ {
 				sum = sum + CodonScore[e]
@@ -224,98 +217,98 @@ func multilayerComparison(wg *sync.WaitGroup, o, idx, slen int, sequenceProcessA
 		Start = Start * 3
 		End = End * 3
 		Position := fmt.Sprintf("%v %v", Start, End)
-		p := make([]string, 0)
+		p := make(map[float32]string, 0)
 		op, _ := OS_POS.Load(idx)
 		if op != nil {
-			p = op.([]string)
+			p = op.(map[float32]string)
 		}
-		p = append(p, Position)
+		p[Max] = Position
 		OS_POS.Delete(idx)
 		OS_POS.Store(idx, p)
 
-		mv := make([]float32, 0)
+		mv := make(map[float32]string, 0)
 		omv, _ := OS_MAX_VALUE.Load(idx)
 		if omv != nil {
-			mv = omv.([]float32)
+			mv = omv.(map[float32]string)
 		}
-		mv = append(mv, Max)
+		mv[Max] = outStr
 		OS_MAX_VALUE.Delete(idx)
 		OS_MAX_VALUE.Store(idx, mv)
 
-		mx := make([]string, 0)
+		mx := make([]float32, 0)
 		omx, _ := OS_MAX.Load(idx)
 		if omx != nil {
-			mx = omx.([]string)
+			mx = omx.([]float32)
 		}
-		mx = append(mx, outStr)
+		mx = append(mx, Max)
 		OS_MAX.Delete(idx)
 		OS_MAX.Store(idx, mx)
 
 		OutParray := strings.Split(outStr, " ")
 		max_length := len(OutParray) - 1
 
-		ls := make([]int, 0)
+		ls := make(map[float32]int, 0)
 		ols, _ := OS_LENGTH_STORE.Load(idx)
 		if ols != nil {
-			ls = ols.([]int)
+			ls = ols.(map[float32]int)
 		}
-		ls = append(ls, max_length)
+		ls[Max] = max_length
 		OS_LENGTH_STORE.Delete(idx)
 		OS_LENGTH_STORE.Store(idx, ls)
 
 	} else {
-		num := float32(0)
+		var num float32
 		for w := range XRangeInt(0, seqLength, 2) {
 			v := TempArray[w] + TempArray[w+1]
 			byteMatchResult, _ := regexp.Match(`[atcg]{6}`, []byte(v))
 			if byteMatchResult {
 				if v9, ok := HashMatrix[v]; ok {
-					v1, _ := strconv.ParseFloat(v9, 64)
+					v1, _ := strconv.ParseFloat(v9, 32)
 					num = num + float32(v1)
 				}
 			}
 		}
 		outStr := strings.Join(TempArray, " ")
-		p := make([]string, 0)
+		p := make(map[float32]string, 0)
 		op, _ := OS_POS.Load(idx)
 		if op != nil {
-			p = op.([]string)
+			p = op.(map[float32]string)
 		}
-		p = append(p, "Full Length")
+		p[num] = "Full Length"
 		OS_POS.Delete(idx)
 		OS_POS.Store(idx, p)
 
-		mv := make([]float32, 0)
+		mv := make(map[float32]string, 0)
 		omv, _ := OS_MAX_VALUE.Load(idx)
 		if omv != nil {
-			mv = omv.([]float32)
+			mv = omv.(map[float32]string)
 		}
-		mv = append(mv, num)
+		mv[num] = outStr
 		OS_MAX_VALUE.Delete(idx)
 		OS_MAX_VALUE.Store(idx, mv)
 
-		mx := make([]string, 0)
+		mx := make([]float32, 0)
 		omx, _ := OS_MAX.Load(idx)
 		if omx != nil {
-			mx = omx.([]string)
+			mx = omx.([]float32)
 		}
-		mx = append(mx, outStr)
+		mx = append(mx, num)
 		OS_MAX.Delete(idx)
 		OS_MAX.Store(idx, mx)
 
-		ls := make([]int, 0)
+		ls := make(map[float32]int, 0)
 		ols, _ := OS_LENGTH_STORE.Load(idx)
 		if ols != nil {
-			ls = ols.([]int)
+			ls = ols.(map[float32]int)
 		}
-		ls = append(ls, seqLength)
+		ls[num] = seqLength
 		OS_LENGTH_STORE.Delete(idx)
 		OS_LENGTH_STORE.Store(idx, ls)
 
 	}
 }
 
-func multilayerComparisonTwo(wg *sync.WaitGroup, o, idx, mlen int, mlcdsSequence, mlcdsSequenceR []string, HashMatrix map[string]string) {
+func multilayerComparisonTwo(wg *sync.WaitGroup, o, mlen int, idx string, mlcdsSequence, mlcdsSequenceR []string, HashMatrix map[string]string) {
 	defer wg.Done()
 	MLCDS_TempStr := ""
 	if o < 3 {
@@ -326,14 +319,14 @@ func multilayerComparisonTwo(wg *sync.WaitGroup, o, idx, mlen int, mlcdsSequence
 	}
 	MLCDS_array := strings.Split(MLCDS_TempStr, " ")
 	MLCDS_array = MLCDS_array[:len(MLCDS_array)-1]
-	otherNum := float32(0)
+	var otherNum float32
 	mlcdsArrayLen := len(MLCDS_array) - 1
-	for w := range XRangeInt(0, mlcdsArrayLen, 2) {
-		v := MLCDS_array[w] + MLCDS_array[w+1]
+	for i := 0; i < mlcdsArrayLen; i++ {
+		v := MLCDS_array[i] + MLCDS_array[i+1]
 		byteMatchResult, _ := regexp.Match(`[atcg]{6}`, []byte(v))
 		if byteMatchResult {
 			if v9, ok := HashMatrix[v]; ok {
-				v1, _ := strconv.ParseFloat(v9, 64)
+				v1, _ := strconv.ParseFloat(v9, 32)
 				otherNum = otherNum + float32(v1)
 			}
 		}

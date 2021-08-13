@@ -29,24 +29,19 @@ func main() {
 		Info("Please enter a positive integer -- thread")
 		return
 	}
-	outTemp := fmt.Sprintf("%s/temp", outDir)
-	if !PathExists(outTemp) {
-		err := os.MkdirAll(outTemp, os.ModePerm)
-		if err != nil {
-			Error("Create Temp Err : [%s]", err.Error())
-			return
-		}
-	}
 	hashMatrix := ReadFileMatrix(cnciParameters + "/CNCI_matrix")
 	sequenceArr := ReadFileArray(inputFile)
 	sLen := len(sequenceArr) - 1
 	sequenceArr = sequenceArr[:sLen]
-	fastArray := TwoLineFasta(sequenceArr)
-	labelArray, FastqSeqArray := Tran_checkSeq(fastArray)
 
-	tot := GetLabelArray(labelArray, FastqSeqArray)
+	fastArray := TwoLineFasta(sequenceArr)
+	if len(fastArray) < thread {
+		Info("Please set a smaller number of threads")
+		return
+	}
+
 	Info("-------Start splitting file------")
-	in := SplitFile(tot, thread)
+	in := SplitFile(fastArray, thread)
 	Info("--------End of split file-------")
 	Info("--------Start calculation-------")
 	seam := gsema.NewSemaphore(thread)
@@ -85,4 +80,8 @@ func main() {
 	Info("---------End of output file----------")
 	cost := time.Since(start)
 	Info("Time use [%s]", cost)
+	_ = os.Remove(SvmPutFileName)
+	_ = os.Remove(SvmFile)
+	_ = os.Remove(SvmTmp)
+	_ = os.Remove(outfile)
 }
