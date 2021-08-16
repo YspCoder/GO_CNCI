@@ -30,7 +30,7 @@ func main() {
 		Info("Please enter a positive integer -- thread")
 		return
 	}
-	hashMatrix := ReadFileMatrix(cnciParameters + "/CNCI_matrix")
+	hashMatrix := ReadFileMatrix(cnciParameters + "/GO_CNCI_matrix")
 	sequenceArr := ReadFileArray(inputFile)
 	sLen := len(sequenceArr)
 	if sequenceArr[sLen-1] == "" {

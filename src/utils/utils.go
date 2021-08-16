@@ -12,16 +12,6 @@ import (
 	"sync"
 )
 
-type StringToList []string
-
-func (s StringToList) Len() int      { return len(s) }
-func (s StringToList) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
-func (s StringToList) Less(i, j int) bool {
-	t, _ := strconv.ParseFloat(strings.ReplaceAll(strings.Split(s[i], "\t")[0], "MSTRG.", ""), 64)
-	p, _ := strconv.ParseFloat(strings.ReplaceAll(strings.Split(s[j], "\t")[0], "MSTRG.", ""), 64)
-	return t < p
-}
-
 // XRangeInt step-by-step
 func XRangeInt(args ...int) chan int {
 	if l := len(args); l < 1 || l > 3 {
@@ -148,7 +138,7 @@ func PutResult(detilArray []string, filepath string) []string {
 	classifyIndex := 0
 	indexCoding := "1"
 	TempResultArr := make([]string, 0)
-	sort.Sort(StringToList(detilArray))
+	sort.Strings(detilArray)
 	for i := 0; i < len(detilArray); i++ {
 		tempLabelArrLabel := strings.Split(detilArray[i], ";;;;;")
 		Label := tempLabelArrLabel[0]
