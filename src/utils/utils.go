@@ -19,10 +19,6 @@ import (
 	"sync"
 )
 
-var (
-	Alphabet = []string{"ttt", "ttc", "tta", "ttg", "tct", "tcc", "tca", "tcg", "tat", "tac", "tgt", "tgc", "tgg", "ctt", "ctc", "cta", "ctg", "cct", "ccc", "cca", "ccg", "cat", "cac", "caa", "cag", "cgt", "cgc", "cga", "cgg", "att", "atc", "ata", "atg", "act", "acc", "aca", "acg", "aat", "aac", "aaa", "aag", "agt", "agc", "aga", "agg", "gtt", "gtc", "gta", "gtg", "gct", "gcc", "gca", "gcg", "gat", "gac", "gaa", "gag", "ggt", "ggc", "gga", "ggg"}
-)
-
 //step-by-step
 func XRangeInt(args ...int) chan int {
 	if l := len(args); l < 1 || l > 3 {
@@ -98,17 +94,6 @@ func TwoLineFasta(sequence_Arr []string) []string {
 	return Tmp_sequence_Arr
 }
 
-func GetLabelArray(labelArray, fastaSeqArray []string) []string {
-	TOT_STRING := make([]string, 0)
-	for i := 0; i < len(labelArray); i++ {
-		tmp_label := strings.ReplaceAll(labelArray[i], "\r", "")
-		Temp_Seq := strings.ReplaceAll(fastaSeqArray[i], "\r", "")
-		TOT_STRING = append(TOT_STRING, tmp_label)
-		TOT_STRING = append(TOT_STRING, Temp_Seq)
-	}
-	return TOT_STRING
-}
-
 func SplitFile(files []string, thread int) *sync.Map {
 	file_num := len(files) / 2
 	split_step := file_num / thread
@@ -131,13 +116,23 @@ func SplitFile(files []string, thread int) *sync.Map {
 	return &in
 }
 
-func Libsvm(filepath, outSvm, outfile, outTmp, libsvm_path, CNCI_Parameters string) error {
-	err := CmdBash("bash", "-c", libsvm_path+"/svm-scale -r "+CNCI_Parameters+"/python_scale "+filepath+" > "+outSvm)
+func Libsvm(filepath, outSvm, outfile, outTmp, libsvm_path, CNCI_Parameters, classModel string) error {
+
+	var scale, model string
+	if classModel == "ve" {
+		scale = "/go_scale"
+		model = "/go_model"
+	} else if classModel == "pl" {
+		scale = "/plant_scale"
+		model = "/plant_model"
+	}
+
+	err := CmdBash("bash", "-c", libsvm_path+"/svm-scale -r "+CNCI_Parameters+scale+" "+filepath+" > "+outSvm)
 	if err != nil {
 		Error("svm-scale err [%s]", err.Error())
 		return err
 	}
-	err = CmdBash("bash", "-c", libsvm_path+"/svm-predict "+outSvm+" "+CNCI_Parameters+"/python_model "+outfile+" > "+outTmp)
+	err = CmdBash("bash", "-c", libsvm_path+"/svm-predict "+outSvm+" "+CNCI_Parameters+model+" "+outfile+" > "+outTmp)
 	if err != nil {
 		Error("svm-predict err [%s]", err.Error())
 		return err
@@ -304,13 +299,4 @@ func ReadFileMatrix(path string) map[string]string {
 		matrix[params[0]] = params[1]
 	}
 	return matrix
-}
-
-//init sync.Map
-func GetAlphabetMap() *sync.Map {
-	var ab = &sync.Map{}
-	for _, v := range Alphabet {
-		ab.Store(v, 0)
-	}
-	return ab
 }

@@ -43,13 +43,12 @@ func (this *Reckon) Init(wg *sync.WaitGroup) {
 	sequenceArr := this.FileInput.(map[string]string)
 	for k, v := range sequenceArr {
 		sm.Add(1)
-		codonArr := GetAlphabetMap()
-		go compare(sm, v, k, HashMatrix, codonArr)
+		go compare(sm, v, k, HashMatrix)
 	}
 	sm.Wait()
 }
 
-func compare(sa *gsema.Semaphore, Seq, Label string, HashMatrix map[string]string, codonArr *sync.Map) {
+func compare(sa *gsema.Semaphore, Seq, Label string, HashMatrix map[string]string) {
 	defer sa.Done()
 	DetilLen := len(Seq)
 	tran_fir_seq := strings.ToLower(Seq)
@@ -139,32 +138,31 @@ func compare(sa *gsema.Semaphore, Seq, Label string, HashMatrix map[string]strin
 	}
 	length_precent := float64(mlength) / length_total_score
 	codingArray := make([]string, 0)
+	codonArr := map[string]float64{"ttt": 0, "ttc": 0, "tta": 0, "ttg": 0, "tct": 0, "tcc": 0, "tca": 0, "tcg": 0, "tat": 0, "tac": 0, "tgt": 0, "tgc": 0, "tgg": 0, "ctt": 0, "ctc": 0, "cta": 0, "ctg": 0, "cct": 0, "ccc": 0, "cca": 0, "ccg": 0, "cat": 0, "cac": 0, "caa": 0, "cag": 0, "cgt": 0, "cgc": 0, "cga": 0, "cgg": 0, "att": 0, "atc": 0, "ata": 0, "atg": 0, "act": 0, "acc": 0, "aca": 0, "acg": 0, "aat": 0, "aac": 0, "aaa": 0, "aag": 0, "agt": 0, "agc": 0, "aga": 0, "agg": 0, "gtt": 0, "gtc": 0, "gta": 0, "gtg": 0, "gct": 0, "gcc": 0, "gca": 0, "gcg": 0, "gat": 0, "gac": 0, "gaa": 0, "gag": 0, "ggt": 0, "ggc": 0, "gga": 0, "ggg": 0}
+	ca := []string{"ttt", "ttc", "tta", "ttg", "tct", "tcc", "tca", "tcg", "tat", "tac", "tgt", "tgc", "tgg", "ctt", "ctc", "cta", "ctg", "cct", "ccc", "cca", "ccg", "cat", "cac", "caa", "cag", "cgt", "cgc", "cga", "cgg", "att", "atc", "ata", "atg", "act", "acc", "aca", "acg", "aat", "aac", "aaa", "aag", "agt", "agc", "aga", "agg", "gtt", "gtc", "gta", "gtg", "gct", "gcc", "gca", "gcg", "gat", "gac", "gaa", "gag", "ggt", "ggc", "gga", "ggg"}
+
 	for _, v := range o_arr {
 		byteMatchResult, _ := regexp.Match(`[atcg{3}]`, []byte(v))
 		if byteMatchResult && v != "taa" && v != "tag" && v != "tga" {
-			if v1, ok := codonArr.Load(v); ok {
-				v2 := v1.(int)
-				v3 := v2 + 1
-				codonArr.Delete(v)
-				codonArr.Store(v, v3)
+			if v1, ok := codonArr[v]; ok {
+				v2 := v1 + 1
+				codonArr[v] = v2
 			}
 		}
 	}
-	C_num1 := 0
-	codonArr.Range(func(key, value interface{}) bool {
-		v1 := value.(int)
-		C_num1 = C_num1 + v1
-		return true
-	})
-	if C_num1 == 0 {
-		C_num1 = 1
+	var CNum1 float64
+
+	for _, v := range codonArr {
+		CNum1 = CNum1 + v
 	}
-	codonArr.Range(func(key, value interface{}) bool {
-		v1 := value.(int)
-		v2 := v1 / C_num1
-		codingArray = append(codingArray, fmt.Sprintf("%v", v2))
-		return true
-	})
+	if CNum1 == 0 {
+		CNum1 = 1
+	}
+	for i := 0; i < len(ca); i++ {
+		v1 := codonArr[ca[i]] / CNum1
+		codingArray = append(codingArray, fmt.Sprintf("%v", v1))
+	}
+
 	Array_Str := strings.Join(codingArray, " ")
 	PROPERTY_STR := fmt.Sprintf("%v %v %v %v %v %v %v", Label, M, mlength, mScore, length_precent, score_distance, Array_Str)
 	OS_PROPERTY = append(OS_PROPERTY, PROPERTY_STR)

@@ -14,17 +14,18 @@ import (
 
 func main() {
 	start := time.Now()
-	if len(os.Args) < 5 {
+	if len(os.Args) < 6 {
 		Info("Insufficient required parameters")
-		Info("./GO_CNCI reference_folder inputFile outDir libsvmpath thread")
-		Info("./GO_CNCI ./CNCI_Parameters ./94d6346_candidate.fa ./test ./libsvm 8")
+		Info("./GO_CNCI reference_folder inputFile outDir libsvmpath model thread")
+		Info("./GO_CNCI ./CNCI_Parameters ./94d6346_candidate.fa ./test ./libsvm ve 8")
 		return
 	}
 	cnciParameters := os.Args[1]
 	inputFile := os.Args[2]
 	outDir := os.Args[3]
 	libsvmPath := os.Args[4]
-	thread, err := strconv.Atoi(os.Args[5])
+	classModel := os.Args[5]
+	thread, err := strconv.Atoi(os.Args[6])
 	if err != nil {
 		Info("Please enter a positive integer -- thread")
 		return
@@ -68,7 +69,7 @@ func main() {
 	SvmFile := fmt.Sprintf("%s/file", outDir)
 	SvmTmp := fmt.Sprintf("%s/tmp", outDir)
 	Info("-------Start vector calculation------")
-	err = Libsvm(outfile, SvmPutFileName, SvmFile, SvmTmp, libsvmPath, cnciParameters)
+	err = Libsvm(outfile, SvmPutFileName, SvmFile, SvmTmp, libsvmPath, cnciParameters, classModel)
 	if err != nil {
 		Error("Libsvm err : [%s]", err.Error())
 		return

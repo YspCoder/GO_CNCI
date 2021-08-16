@@ -7,7 +7,8 @@
 The input file is gffread output
 thread propose 4-12
 This tool will execute in hyper thread (t*6)
- ./GO_CNCI reference_folder inputFile outDir libsvmpath thread
+assign the classification models ("ve" for vertebrate species, "pl" for plat species)
+ ./GO_CNCI reference_folder inputFile outDir libsvmpath model thread
 ```
 ## Install GO_CNCI
 ```
@@ -24,7 +25,7 @@ This tool will execute in hyper thread (t*6)
 
 ## Example
 ```
- ./GO_CNCI ./CNCI_Parameters ./94d6346_candidate.fa ./test ./libsvm 8
+ ./GO_CNCI ./CNCI_Parameters ./94d6346_candidate.fa ./test ./libsvm ve 8
 ```
 ## Citation
 ```
