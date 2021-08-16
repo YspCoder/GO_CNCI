@@ -2,6 +2,7 @@ package merge
 
 import (
 	. "GO_CNCI/src/base"
+	. "GO_CNCI/src/utils"
 	"os"
 	"sort"
 	"strconv"
@@ -15,7 +16,7 @@ func AddSvmLabel(rec []string, FileName string) error {
 		Error("Create error![%v]\n", err.Error())
 		return err
 	}
-	sort.Strings(rec)
+	sort.Sort(StringToList(rec))
 	for i := 0; i < len(rec); i++ {
 		tempArr := strings.Split(rec[i], " ")
 		tempArr = tempArr[1:]
