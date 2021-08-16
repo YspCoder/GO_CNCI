@@ -1,6 +1,9 @@
 # GO_CNCI
 ## About GO_CNCI
+```
  CPU resource consumption 100%+
+ Data fault tolerance 99.96%
+```
 
 ## Documentation
 ```

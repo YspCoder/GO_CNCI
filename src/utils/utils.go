@@ -1,10 +1,3 @@
-/**
- * @Author: lipengfei
- * @Description:
- * @File:  common
- * @Version: 1.0.0
- * @Date: 2021/08/06 14:20
- */
 package utils
 
 import (
@@ -19,7 +12,7 @@ import (
 	"sync"
 )
 
-//step-by-step
+// XRangeInt step-by-step
 func XRangeInt(args ...int) chan int {
 	if l := len(args); l < 1 || l > 3 {
 		Error("Error args length, xRangeInt requires 1-3 int arguments")
@@ -53,7 +46,7 @@ func XRangeInt(args ...int) chan int {
 	return ch
 }
 
-//Convert each line of the file to an array parameter
+// ReadFileArray Convert each line of the file to an array parameter
 func ReadFileArray(path string) []string {
 	f, err := os.Open(path)
 	if err != nil {
@@ -70,36 +63,36 @@ func ReadFileArray(path string) []string {
 	return fileArray
 }
 
-func TwoLineFasta(sequence_Arr []string) []string {
-	Tmp_sequence_Arr := make([]string, 0)
-	Tmp_trans_str := ""
-	for i := 0; i < len(sequence_Arr); i++ {
-		if strings.Contains(sequence_Arr[i], ">") {
+func TwoLineFasta(sequenceArr []string) []string {
+	TmpSequenceArr := make([]string, 0)
+	TmpTransStr := ""
+	for i := 0; i < len(sequenceArr); i++ {
+		if strings.Contains(sequenceArr[i], ">") {
 			if i == 0 {
-				Tmp_sequence_Arr = append(Tmp_sequence_Arr, sequence_Arr[i])
+				TmpSequenceArr = append(TmpSequenceArr, sequenceArr[i])
 			} else {
-				Tmp_sequence_Arr = append(Tmp_sequence_Arr, Tmp_trans_str)
-				Tmp_sequence_Arr = append(Tmp_sequence_Arr, sequence_Arr[i])
-				Tmp_trans_str = ""
+				TmpSequenceArr = append(TmpSequenceArr, TmpTransStr)
+				TmpSequenceArr = append(TmpSequenceArr, sequenceArr[i])
+				TmpTransStr = ""
 			}
 		} else {
-			if i == len(sequence_Arr)-1 {
-				Tmp_trans_str = fmt.Sprintf("%v%v", Tmp_trans_str, sequence_Arr[i])
-				Tmp_sequence_Arr = append(Tmp_sequence_Arr, Tmp_trans_str)
+			if i == len(sequenceArr)-1 {
+				TmpTransStr = fmt.Sprintf("%v%v", TmpTransStr, sequenceArr[i])
+				TmpSequenceArr = append(TmpSequenceArr, TmpTransStr)
 			} else {
-				Tmp_trans_str = fmt.Sprintf("%v%v", Tmp_trans_str, sequence_Arr[i])
+				TmpTransStr = fmt.Sprintf("%v%v", TmpTransStr, sequenceArr[i])
 			}
 		}
 	}
-	return Tmp_sequence_Arr
+	return TmpSequenceArr
 }
 
 func SplitFile(files []string, thread int) *sync.Map {
-	file_num := len(files) / 2
-	split_step := file_num / thread
-	split_step = split_step * 2
+	fileNum := len(files) / 2
+	splitStep := fileNum / thread
+	splitStep = splitStep * 2
 	start := 0
-	end := split_step
+	end := splitStep
 	in := sync.Map{}
 	for i := 1; i <= thread; i++ {
 		mp := make(map[string]string)
@@ -110,13 +103,13 @@ func SplitFile(files []string, thread int) *sync.Map {
 			mp[key] = value
 		}
 		in.Store(i, mp)
-		start += split_step
-		end += split_step
+		start += splitStep
+		end += splitStep
 	}
 	return &in
 }
 
-func Libsvm(filepath, outSvm, outfile, outTmp, libsvm_path, CNCI_Parameters, classModel string) error {
+func Libsvm(filepath, outSvm, outfile, outTmp, libsvmPath, CnciParameters, classModel string) error {
 
 	var scale, model string
 	if classModel == "ve" {
@@ -127,12 +120,12 @@ func Libsvm(filepath, outSvm, outfile, outTmp, libsvm_path, CNCI_Parameters, cla
 		model = "/plant_model"
 	}
 
-	err := CmdBash("bash", "-c", libsvm_path+"/svm-scale -r "+CNCI_Parameters+scale+" "+filepath+" > "+outSvm)
+	err := CmdBash("bash", "-c", libsvmPath+"/svm-scale -r "+CnciParameters+scale+" "+filepath+" > "+outSvm)
 	if err != nil {
 		Error("svm-scale err [%s]", err.Error())
 		return err
 	}
-	err = CmdBash("bash", "-c", libsvm_path+"/svm-predict "+outSvm+" "+CNCI_Parameters+model+" "+outfile+" > "+outTmp)
+	err = CmdBash("bash", "-c", libsvmPath+"/svm-predict "+outSvm+" "+CnciParameters+model+" "+outfile+" > "+outTmp)
 	if err != nil {
 		Error("svm-predict err [%s]", err.Error())
 		return err
@@ -140,28 +133,28 @@ func Libsvm(filepath, outSvm, outfile, outTmp, libsvm_path, CNCI_Parameters, cla
 	return nil
 }
 
-func PutResult(detil_array []string, filepath string) []string {
-	file_Arr := ReadFileArray(filepath)
-	classify_index := 0
-	index_coding := "1"
-	Temp_Result_Arr := make([]string, 0)
-	sort.Strings(detil_array)
-	for _, v := range detil_array {
-		temp_label_arr_label := strings.Split(v, ";;;;;")
-		Label := temp_label_arr_label[0]
-		temp_label_arr := strings.Split(temp_label_arr_label[1], " ")
-		sub_temp_label_arr := temp_label_arr[1:]
-		sub_temp_label_str := strings.Join(sub_temp_label_arr, " ")
-		if file_Arr[classify_index] == index_coding {
+func PutResult(detilArray []string, filepath string) []string {
+	fileArr := ReadFileArray(filepath)
+	classifyIndex := 0
+	indexCoding := "1"
+	TempResultArr := make([]string, 0)
+	sort.Strings(detilArray)
+	for i := 0; i < len(detilArray); i++ {
+		tempLabelArrLabel := strings.Split(detilArray[i], ";;;;;")
+		Label := tempLabelArrLabel[0]
+		tempLabelArr := strings.Split(tempLabelArrLabel[1], " ")
+		subTempLabelArr := tempLabelArr[1:]
+		subTempLabelStr := strings.Join(subTempLabelArr, " ")
+		if fileArr[classifyIndex] == indexCoding {
 			Label = fmt.Sprintf("%s;;;;; coding", Label)
 		} else {
 			Label = fmt.Sprintf("%s;;;;; noncoding", Label)
 		}
-		classify_index = classify_index + 1
-		Temp_Result_str := fmt.Sprintf("%s %s", Label, sub_temp_label_str)
-		Temp_Result_Arr = append(Temp_Result_Arr, Temp_Result_str)
+		classifyIndex = classifyIndex + 1
+		TempResultStr := fmt.Sprintf("%s %s", Label, subTempLabelStr)
+		TempResultArr = append(TempResultArr, TempResultStr)
 	}
-	return Temp_Result_Arr
+	return TempResultArr
 }
 
 func PrintResult(result []string, outDetil string) {
@@ -178,45 +171,45 @@ func PrintResult(result []string, outDetil string) {
 		if len(labelArr) < 5 {
 			continue
 		}
-		T_label := outLabelArr[0]
-		Tabel_label := T_label[1:]
+		TLabel := outLabelArr[0]
+		TableLabel := TLabel[1:]
 		property := labelArr[0]
-		start_position := labelArr[1]
-		stop_position := labelArr[2]
+		startPosition := labelArr[1]
+		stopPosition := labelArr[2]
 		value := labelArr[3]
 		v1, _ := strconv.ParseFloat(substring(value), 64)
 		tlen := labelArr[4]
 		if v1 == 0 {
 			v1 = v1 + 0.001
 		}
-		temp_out_str := ""
+		tempOutStr := ""
 		if property == "noncoding" {
 			v3 := (0.64 * v1) * 0.64
 			if v3 > 0 {
 				if v3 > 1 {
 					v4 := -1 / v3
-					temp_out_str = fmt.Sprintf("%v\t%v\t%.5f\t%v\t%v\t%v\n", Tabel_label, property, v4, start_position, stop_position, tlen)
+					tempOutStr = fmt.Sprintf("%v\t%v\t%.5f\t%v\t%v\t%v\n", TableLabel, property, v4, startPosition, stopPosition, tlen)
 				} else {
 					v4 := -1 * v3
-					temp_out_str = fmt.Sprintf("%v\t%v\t%.5f\t%v\t%v\t%v\n", Tabel_label, property, v4, start_position, stop_position, tlen)
+					tempOutStr = fmt.Sprintf("%v\t%v\t%.5f\t%v\t%v\t%v\n", TableLabel, property, v4, startPosition, stopPosition, tlen)
 				}
 			} else {
-				temp_out_str = fmt.Sprintf("%v\t%v\t%.5f\t%v\t%v\t%v\n", Tabel_label, property, v3, start_position, stop_position, tlen)
+				tempOutStr = fmt.Sprintf("%v\t%v\t%.5f\t%v\t%v\t%v\n", TableLabel, property, v3, startPosition, stopPosition, tlen)
 			}
 		} else if property == "coding" {
 			if v1 <= 0.0 {
 				if v1 <= -1 {
 					v3 := -1 / v1
-					temp_out_str = fmt.Sprintf("%v\t%v\t%.5f\t%v\t%v\t%v\n", Tabel_label, property, v3, start_position, stop_position, tlen)
+					tempOutStr = fmt.Sprintf("%v\t%v\t%.5f\t%v\t%v\t%v\n", TableLabel, property, v3, startPosition, stopPosition, tlen)
 				} else {
 					v3 := -1 * v1
-					temp_out_str = fmt.Sprintf("%v\t%v\t%.5f\t%v\t%v\t%v\n", Tabel_label, property, v3, start_position, stop_position, tlen)
+					tempOutStr = fmt.Sprintf("%v\t%v\t%.5f\t%v\t%v\t%v\n", TableLabel, property, v3, startPosition, stopPosition, tlen)
 				}
 			} else {
-				temp_out_str = fmt.Sprintf("%v\t%v\t%.5f\t%v\t%v\t%v\n", Tabel_label, property, v1, start_position, stop_position, tlen)
+				tempOutStr = fmt.Sprintf("%v\t%v\t%.5f\t%v\t%v\t%v\n", TableLabel, property, v1, startPosition, stopPosition, tlen)
 			}
 		}
-		_, _ = OutFileResult.WriteString(temp_out_str)
+		_, _ = OutFileResult.WriteString(tempOutStr)
 	}
 	defer OutFileResult.Close()
 }

@@ -16,8 +16,8 @@ func AddSvmLabel(rec []string, FileName string) error {
 		return err
 	}
 	sort.Strings(rec)
-	for _, v := range rec {
-		tempArr := strings.Split(v, " ")
+	for i := 0; i < len(rec); i++ {
+		tempArr := strings.Split(rec[i], " ")
 		tempArr = tempArr[1:]
 		for j := 0; j < len(tempArr); j++ {
 			index := j + 1
