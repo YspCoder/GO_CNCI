@@ -180,6 +180,9 @@ func PrintResult(result []string, outDetil string) {
 	for _, v := range result {
 		outLabelArr := strings.Split(v, ";;;;; ")
 		labelArr := strings.Split(outLabelArr[1], " ")
+		if len(labelArr) < 5 {
+			continue
+		}
 		T_label := outLabelArr[0]
 		Tabel_label := T_label[1:]
 		property := labelArr[0]

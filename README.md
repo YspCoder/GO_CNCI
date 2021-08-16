@@ -5,12 +5,13 @@
 ## Documentation
 ```
 The input file is gffread output
-number_of_file_partitions propose 1-30
 thread propose 4-12
- ./GO_CNCI reference_folder inputFile number_of_file_partitions outDir libsvmpath thread
+This tool will execute in hyper thread (t*6)
+ ./GO_CNCI reference_folder inputFile outDir libsvmpath thread
 ```
 ## Install GO_CNCI
 ```
+ cd GO_CNCI
  git clone https://github.com/yingfeikeji/GO_CNCI.git
  unzip libsvm-3.0.zip
  cd libsvm-3.0
