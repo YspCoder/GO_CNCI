@@ -19,6 +19,7 @@ func main() {
 		fmt.Println("./GO_CNCI ./CNCI_Parameters ./94d6346_candidate.fa ./test ./libsvm ve 8")
 		return
 	}
+	fmt.Println("GO_CNCI version : 1.0.0")
 	cnciParameters := os.Args[1]
 	inputFile := os.Args[2]
 	outDir := os.Args[3]
