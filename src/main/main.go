@@ -1,7 +1,6 @@
 package main
 
 import (
-	. "GO_CNCI/src/base"
 	"GO_CNCI/src/merge"
 	"GO_CNCI/src/reckon"
 	. "GO_CNCI/src/utils"
@@ -15,9 +14,9 @@ import (
 func main() {
 	start := time.Now()
 	if len(os.Args) < 6 {
-		Info("Insufficient required parameters")
-		Info("./GO_CNCI reference_folder inputFile outDir libsvmpath model thread")
-		Info("./GO_CNCI ./CNCI_Parameters ./94d6346_candidate.fa ./test ./libsvm ve 8")
+		fmt.Println("Insufficient required parameters")
+		fmt.Println("./GO_CNCI reference_folder inputFile outDir libsvmpath model thread")
+		fmt.Println("./GO_CNCI ./CNCI_Parameters ./94d6346_candidate.fa ./test ./libsvm ve 8")
 		return
 	}
 	cnciParameters := os.Args[1]
@@ -27,7 +26,7 @@ func main() {
 	classModel := os.Args[5]
 	thread, err := strconv.Atoi(os.Args[6])
 	if err != nil {
-		Info("Please enter a positive integer -- thread")
+		fmt.Println("Please enter a positive integer -- thread")
 		return
 	}
 	hashMatrix := ReadFileMatrix(cnciParameters + "/GO_CNCI_matrix")
@@ -38,14 +37,14 @@ func main() {
 	}
 	fastArray := TwoLineFasta(sequenceArr)
 	if len(fastArray) < thread {
-		Info("Please set a smaller number of threads")
+		fmt.Println("Please set a smaller number of threads")
 		return
 	}
 
-	Info("-------Start splitting file------")
+	fmt.Println("-------Start splitting file------")
 	in := SplitFile(fastArray, thread)
-	Info("--------End of split file-------")
-	Info("--------Start calculation-------")
+	fmt.Println("--------End of split file-------")
+	fmt.Println("--------Start calculation-------")
 	var wg sync.WaitGroup
 	for i := 1; i <= thread; i++ {
 		wg.Add(1)
@@ -56,32 +55,32 @@ func main() {
 		go rk.Init(&wg)
 	}
 	wg.Wait()
-	Info("--------End of calculation-------")
+	fmt.Println("--------End of calculation-------")
 	outfile := fmt.Sprintf("%s/pro", outDir)
-	Info("---------Start merging--------")
+	fmt.Println("---------Start merging--------")
 	err = merge.AddSvmLabel(reckon.OS_PROPERTY, outfile)
 	if err != nil {
-		Error("AddSvmLabel err : [%s]", err.Error())
+		fmt.Printf("AddSvmLabel err : [%s]", err.Error())
 		return
 	}
-	Info("---------End of merge-------")
+	fmt.Println("---------End of merge-------")
 	SvmPutFileName := fmt.Sprintf("%s/svm", outDir)
 	SvmFile := fmt.Sprintf("%s/file", outDir)
 	SvmTmp := fmt.Sprintf("%s/tmp", outDir)
-	Info("-------Start vector calculation------")
+	fmt.Println("-------Start vector calculation------")
 	err = Libsvm(outfile, SvmPutFileName, SvmFile, SvmTmp, libsvmPath, cnciParameters, classModel)
 	if err != nil {
-		Error("Libsvm err : [%s]", err.Error())
+		fmt.Printf("Libsvm err : [%s]", err.Error())
 		return
 	}
-	Info("----------End of vector calculation--------")
-	Info("Start output file")
+	fmt.Println("----------End of vector calculation--------")
+	fmt.Println("Start output file")
 	FirResult := PutResult(reckon.OS_DETIL, SvmFile)
 	SvmFinalResult := fmt.Sprintf("%s/GO_CNCI.index", outDir)
 	PrintResult(FirResult, SvmFinalResult)
-	Info("---------End of output file----------")
+	fmt.Println("---------End of output file----------")
 	cost := time.Since(start)
-	Info("Time use [%s]", cost)
+	fmt.Printf("Time use [%s]", cost)
 	_ = os.Remove(SvmPutFileName)
 	_ = os.Remove(SvmFile)
 	_ = os.Remove(SvmTmp)

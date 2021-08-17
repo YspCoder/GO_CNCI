@@ -1,7 +1,7 @@
 package merge
 
 import (
-	. "GO_CNCI/src/base"
+	"fmt"
 	"os"
 	"sort"
 	"strconv"
@@ -12,7 +12,7 @@ func AddSvmLabel(rec []string, FileName string) error {
 	SvmArrScore := make([]string, 0)
 	SvmFileOne, err := os.Create(FileName)
 	if err != nil {
-		Error("Create error![%v]\n", err.Error())
+		fmt.Printf("Create error![%v]\n", err.Error())
 		return err
 	}
 	sort.Strings(rec)
@@ -27,7 +27,7 @@ func AddSvmLabel(rec []string, FileName string) error {
 		SvmArrScore = append(SvmArrScore, strTemp)
 		_, err = SvmFileOne.WriteString(strTemp + "\n")
 		if err != nil {
-			Error("WriteString error![%v]\n", err.Error())
+			fmt.Printf("WriteString error![%v]\n", err.Error())
 			continue
 		}
 	}

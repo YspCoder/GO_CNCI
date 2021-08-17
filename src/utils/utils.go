@@ -1,7 +1,6 @@
 package utils
 
 import (
-	. "GO_CNCI/src/base"
 	"bufio"
 	"fmt"
 	"os"
@@ -15,7 +14,7 @@ import (
 // XRangeInt step-by-step
 func XRangeInt(args ...int) chan int {
 	if l := len(args); l < 1 || l > 3 {
-		Error("Error args length, xRangeInt requires 1-3 int arguments")
+		fmt.Println("Error args length, xRangeInt requires 1-3 int arguments")
 	}
 	var start, stop int
 	var step = 1
@@ -50,7 +49,7 @@ func XRangeInt(args ...int) chan int {
 func ReadFileArray(path string) []string {
 	f, err := os.Open(path)
 	if err != nil {
-		Error("Read file fail : %v", err.Error())
+		fmt.Printf("Read file fail : %v", err.Error())
 		return nil
 	}
 	defer f.Close()
@@ -59,7 +58,7 @@ func ReadFileArray(path string) []string {
 	for scanner.Scan() {
 		fileArray = append(fileArray, scanner.Text())
 	}
-	Info("Read file success filename : [%s]", path)
+	fmt.Println("Read file success filename : [%s]", path)
 	return fileArray
 }
 
@@ -122,12 +121,12 @@ func Libsvm(filepath, outSvm, outfile, outTmp, libsvmPath, CnciParameters, class
 
 	err := CmdBash("bash", "-c", libsvmPath+"/svm-scale -r "+CnciParameters+scale+" "+filepath+" > "+outSvm)
 	if err != nil {
-		Error("svm-scale err [%s]", err.Error())
+		fmt.Printf("svm-scale err [%s]", err.Error())
 		return err
 	}
 	err = CmdBash("bash", "-c", libsvmPath+"/svm-predict "+outSvm+" "+CnciParameters+model+" "+outfile+" > "+outTmp)
 	if err != nil {
-		Error("svm-predict err [%s]", err.Error())
+		fmt.Printf("svm-predict err [%s]", err.Error())
 		return err
 	}
 	return nil
@@ -160,7 +159,7 @@ func PutResult(detilArray []string, filepath string) []string {
 func PrintResult(result []string, outDetil string) {
 	OutFileResult, err := os.Create(outDetil)
 	if err != nil {
-		Error("PrintResult Err : [%s]", err.Error())
+		fmt.Printf("PrintResult Err : [%s]", err.Error())
 		return
 	}
 	Tabel := "TranscriptId" + "\t" + "index" + "\t" + "score" + "\t" + "start" + "\t" + "end" + "\t" + "length" + "\n"
@@ -224,7 +223,7 @@ func substring(param string) string {
 
 func CmdBash(commandName string, p1 string, p2 string) error {
 	cmd := exec.Command(commandName, p1, p2)
-	Info("cmd : %v", cmd)
+	fmt.Println("cmd : %v", cmd)
 	cmd.Stderr = cmd.Stdout
 	err := cmd.Start()
 	if err != nil {
@@ -233,7 +232,7 @@ func CmdBash(commandName string, p1 string, p2 string) error {
 	}
 	err = cmd.Wait()
 	if err != nil {
-		Error("Wait Err : %v", err.Error())
+		fmt.Printf("Wait Err : %v", err.Error())
 		return err
 	}
 	return nil
@@ -282,7 +281,7 @@ func ReadFileMatrix(path string) map[string]string {
 	matrix := make(map[string]string, 0)
 	f, err := os.Open(path)
 	if err != nil {
-		Error("Read file fail : %s", err.Error())
+		fmt.Printf("Read file fail : %s", err.Error())
 	}
 	defer f.Close()
 	scanner := bufio.NewScanner(f)
