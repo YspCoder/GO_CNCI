@@ -30,7 +30,11 @@ func main() {
 		fmt.Println("Please enter a positive integer -- thread")
 		return
 	}
-	hashMatrix := ReadFileMatrix(cnciParameters + "/GO_CNCI_matrix")
+	hashMatrix, err := ReadFileMatrix(cnciParameters + "/GO_CNCI_matrix")
+	if err != nil {
+		fmt.Printf("Read file fail : %s\n", err.Error())
+		return
+	}
 	sequenceArr := ReadFileArray(inputFile)
 	sLen := len(sequenceArr)
 	if sequenceArr[sLen-1] == "" {
@@ -61,7 +65,7 @@ func main() {
 	fmt.Println("---------Start merging--------")
 	err = merge.AddSvmLabel(reckon.OS_PROPERTY, outfile)
 	if err != nil {
-		fmt.Printf("AddSvmLabel err : [%s]", err.Error())
+		fmt.Printf("AddSvmLabel err : [%s]\n", err.Error())
 		return
 	}
 	fmt.Println("---------End of merge-------")
@@ -71,7 +75,7 @@ func main() {
 	fmt.Println("-------Start vector calculation------")
 	err = Libsvm(outfile, SvmPutFileName, SvmFile, SvmTmp, libsvmPath, cnciParameters, classModel)
 	if err != nil {
-		fmt.Printf("Libsvm err : [%s]", err.Error())
+		fmt.Printf("Libsvm err : [%s]\n", err.Error())
 		return
 	}
 	fmt.Println("----------End of vector calculation--------")
@@ -81,7 +85,7 @@ func main() {
 	PrintResult(FirResult, SvmFinalResult)
 	fmt.Println("---------End of output file----------")
 	cost := time.Since(start)
-	fmt.Printf("Time use [%s]", cost)
+	fmt.Printf("Time use [%s]\n", cost)
 	_ = os.Remove(SvmPutFileName)
 	_ = os.Remove(SvmFile)
 	_ = os.Remove(SvmTmp)

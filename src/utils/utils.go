@@ -49,7 +49,7 @@ func XRangeInt(args ...int) chan int {
 func ReadFileArray(path string) []string {
 	f, err := os.Open(path)
 	if err != nil {
-		fmt.Printf("Read file fail : %v", err.Error())
+		fmt.Printf("Read file fail : %v\n", err.Error())
 		return nil
 	}
 	defer f.Close()
@@ -58,7 +58,7 @@ func ReadFileArray(path string) []string {
 	for scanner.Scan() {
 		fileArray = append(fileArray, scanner.Text())
 	}
-	fmt.Println("Read file success filename : [%s]", path)
+	fmt.Printf("Read file success filename : [%s]\n", path)
 	return fileArray
 }
 
@@ -121,12 +121,12 @@ func Libsvm(filepath, outSvm, outfile, outTmp, libsvmPath, CnciParameters, class
 
 	err := CmdBash("bash", "-c", libsvmPath+"/svm-scale -r "+CnciParameters+scale+" "+filepath+" > "+outSvm)
 	if err != nil {
-		fmt.Printf("svm-scale err [%s]", err.Error())
+		fmt.Printf("svm-scale err [%s]\n", err.Error())
 		return err
 	}
 	err = CmdBash("bash", "-c", libsvmPath+"/svm-predict "+outSvm+" "+CnciParameters+model+" "+outfile+" > "+outTmp)
 	if err != nil {
-		fmt.Printf("svm-predict err [%s]", err.Error())
+		fmt.Printf("svm-predict err [%s]\n", err.Error())
 		return err
 	}
 	return nil
@@ -159,7 +159,7 @@ func PutResult(detilArray []string, filepath string) []string {
 func PrintResult(result []string, outDetil string) {
 	OutFileResult, err := os.Create(outDetil)
 	if err != nil {
-		fmt.Printf("PrintResult Err : [%s]", err.Error())
+		fmt.Printf("PrintResult Err : [%s]\n", err.Error())
 		return
 	}
 	Tabel := "TranscriptId" + "\t" + "index" + "\t" + "score" + "\t" + "start" + "\t" + "end" + "\t" + "length" + "\n"
@@ -232,7 +232,7 @@ func CmdBash(commandName string, p1 string, p2 string) error {
 	}
 	err = cmd.Wait()
 	if err != nil {
-		fmt.Printf("Wait Err : %v", err.Error())
+		fmt.Printf("Wait Err : %v\n", err.Error())
 		return err
 	}
 	return nil
@@ -277,11 +277,11 @@ func InitCodonSeq(num, length, step int, Arr []string) string {
 	return TempStrPar
 }
 
-func ReadFileMatrix(path string) map[string]string {
+func ReadFileMatrix(path string) (map[string]string, error) {
 	matrix := make(map[string]string, 0)
 	f, err := os.Open(path)
 	if err != nil {
-		fmt.Printf("Read file fail : %s", err.Error())
+		return nil, err
 	}
 	defer f.Close()
 	scanner := bufio.NewScanner(f)
@@ -290,5 +290,5 @@ func ReadFileMatrix(path string) map[string]string {
 		params := strings.Split(line, "\t")
 		matrix[params[0]] = params[1]
 	}
-	return matrix
+	return matrix, nil
 }
