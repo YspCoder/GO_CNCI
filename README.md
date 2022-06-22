@@ -16,7 +16,7 @@ assign the classification models ("ve" for vertebrate species, "pl" for plat spe
 ## Install GO_CNCI
 ```
  cd GO_CNCI
- git clone https://github.com/yingfeikeji/GO_CNCI.git
+ git clone https://github.com/YspCoder/GO_CNCI.git
  unzip libsvm-3.0.zip
  cd libsvm-3.0
  make
